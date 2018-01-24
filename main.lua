@@ -24,6 +24,7 @@ mainMenu = require("modules/Mainmenu")
 Level = require("modules/Level")
 levelSelect = require("modules/LevelSelect")
 lunar = require("modules/Lunar")
+pause = require("modules/Pause")
 ------------------------------------------------------
 --=                TABLE & VAR                     =--
 ------------------------------------------------------
@@ -51,7 +52,9 @@ currentScene = "TITLESCREEN" -- permet de changer la scene
 --=                     LOAD                       =--
 ------------------------------------------------------
 
-
+touch_screen = false
+touch_presspos = {x = 0, y = 0}
+touch_pos = {x = 0, y = 0}
 
 function love.load()
   Font = love.graphics.newFont("images/font/Pixeled.ttf", 18)
@@ -68,10 +71,6 @@ end
 ------------------------------------------------------
 --=                     UPDATE                     =--
 ------------------------------------------------------
-
-touch_screen = false
-touch_presspos = {x = 0, y = 0}
-touch_pos = {x = 0, y = 0}
 
 function love.update(dt)
   
@@ -108,6 +107,7 @@ function love.update(dt)
         objects[i].exist = false
         table.remove(objects, i)
         i = i-1
+        print("pio")
       end
     end
     
@@ -162,43 +162,60 @@ function love.draw()
     drawinrect(backgroundColor, 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
     levelSelect:draw()
   elseif currentScene == "MAINGAME" then
-	  drawinrect(backgroundColor, 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
-  
-      love.graphics.push()
-      
-      love.graphics.translate(-camera.pos.x, -camera.pos.y)
-      
-      for i = 1, #draw_list do
-        if (draw_list[i].name == nil) then
-          love.graphics.draw(draw_list[i].image, draw_list[i].pos.x-draw_list[i].image:getWidth(), draw_list[i].pos.y-draw_list[i].image:getHeight()-Tile.tile_height*2, 0 , Tile.scale.x, Tile.scale.y)
-        elseif (draw_list[i].name == "perso")then
-          
-          if (perso.scale_sign == 1) then 
-          
-          love.graphics.draw(draw_list[i].image, draw_list[i].pos.x, draw_list[i].pos.y, 0, Tile.scale.x, Tile.scale.y)
-          else 
-            love.graphics.draw(draw_list[i].image, draw_list[i].pos.x, draw_list[i].pos.y, 0, -Tile.scale.x, Tile.scale.y, draw_list[i].image:getWidth())
-          end
-        else
-          love.graphics.draw(draw_list[i].image, draw_list[i].pos.x, draw_list[i].pos.y, 0, Tile.scale.x, Tile.scale.y)
-        end
-        if (draw_list[i].id == 6) then
-          pos = {}
-          pos.x = draw_list[i].pos.x
-          pos.y = draw_list[i].pos.y
-        end
-      end
-      --love.graphics.rectangle("fill", perso.pos.x, perso.pos.y, 10, 10)
-      --love.graphics.rectangle("fill", pos.x, pos.y, 30, 30)
-      love.graphics.pop()
-      
-      if (lunar_mode) then
-        love.graphics.draw(lunar_ship.image, lunar_ship.pos.x, lunar_ship.pos.y, math.rad(lunar_ship.r), Tile.scale.x, Tile.scale.y, lunar_ship.image:getWidth(), lunar_ship.image:getHeight()/2)
-        if (lunar_ship.fire_on) then
-          love.graphics.draw(lunar_ship.fire, lunar_ship.pos.x, lunar_ship.pos.y, math.rad(lunar_ship.r), Tile.scale.x, Tile.scale.y, lunar_ship.fire:getWidth()-5, lunar_ship.fire:getHeight()/2)
-        end
-      end
+    if pause.enable == true then
+      love.graphics.setColor(0,255, 255, 50)
+      love.graphics.rectangle("fill",0, 0, love.graphics.getWidth() ,love.graphics.getHeight())
+      love.graphics.setColor(255,255, 255, 255)
     end
+    --love.graphics.clear()
+    
+    if pause.enable == false then
+      love.graphics.setColor(255,255, 255, 255)
+      drawinrect(backgroundColor, 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
+    
+        love.graphics.push()
+        
+        love.graphics.translate(-camera.pos.x, -camera.pos.y)
+        
+        for i = 1, #draw_list do
+          if (draw_list[i].name == nil) then
+            love.graphics.draw(draw_list[i].image, draw_list[i].pos.x-draw_list[i].image:getWidth(), draw_list[i].pos.y-draw_list[i].image:getHeight()-Tile.tile_height*2, 0 , Tile.scale.x, Tile.scale.y)
+          elseif (draw_list[i].name == "perso")then
+            
+            if (perso.scale_sign == 1) then 
+            
+            love.graphics.draw(draw_list[i].image, draw_list[i].pos.x, draw_list[i].pos.y, 0, Tile.scale.x, Tile.scale.y)
+            else 
+              love.graphics.draw(draw_list[i].image, draw_list[i].pos.x, draw_list[i].pos.y, 0, -Tile.scale.x, Tile.scale.y, draw_list[i].image:getWidth())
+            end
+          else
+            love.graphics.draw(draw_list[i].image, draw_list[i].pos.x, draw_list[i].pos.y, 0, Tile.scale.x, Tile.scale.y)
+          end
+          if (draw_list[i].id == 6) then
+            pos = {}
+            pos.x = draw_list[i].pos.x
+            pos.y = draw_list[i].pos.y
+          end
+        end
+        --love.graphics.rectangle("fill", perso.pos.x, perso.pos.y, 10, 10)
+        --love.graphics.rectangle("fill", pos.x, pos.y, 30, 30)
+        love.graphics.pop()
+        
+        if (lunar_mode) then
+          love.graphics.draw(lunar_ship.image, lunar_ship.pos.x, lunar_ship.pos.y, math.rad(lunar_ship.r), Tile.scale.x, Tile.scale.y, lunar_ship.image:getWidth(), lunar_ship.image:getHeight()/2)
+          if (lunar_ship.fire_on) then
+            love.graphics.draw(lunar_ship.fire, lunar_ship.pos.x, lunar_ship.pos.y, math.rad(lunar_ship.r), Tile.scale.x, Tile.scale.y, lunar_ship.fire:getWidth()-5, lunar_ship.fire:getHeight()/2)
+          end
+        end
+      
+      end --pause enable
+      --DEBUG
+        love.graphics.print(tostring(pause.enable) , 0, 10)
+      end
+     
+     
+   
+    
   
 end
 
@@ -215,7 +232,8 @@ function key_is_pressed(key)
   elseif currentScene == "LEVELSELECT" then
     levelSelect:controller(key)
 	elseif currentScene == "MAINGAME" then  -- IN GAME CONTROLL
-    
+    pause:ingame(key)
+    if pause.enable == false then
     local box_moving = false
     for i = 1, #objects do
       if ((objects[i].id == 6 or objects[i].id == 7) and objects[i].moving and not objects[i].falled) then
@@ -313,8 +331,9 @@ function key_is_pressed(key)
         end
       end
     end
+  end -- pause
 
-  end  -- end level select
+  end  -- end level select 
 end --end keypressed
 
 function love.touchpressed(id, x, y)
@@ -554,6 +573,7 @@ function updateDrawList()
   
 end
 
+
 function move_perso(wanted_nextpos, fctMove)
   local CanPass = canPass(wanted_nextpos)
   if (CanPass) then
@@ -601,21 +621,25 @@ function move_perso(wanted_nextpos, fctMove)
     
     while (CanPass and glass_under) do
       print("started ! ")
+      print("wanted next : "..wanted_nextpos.line..", "..wanted_nextpos.column)
       if (map.map_set[wanted_nextpos.line][wanted_nextpos.column] == 4) then
         diff_c = perso.column
         diff_l = perso.line
         fctMove(map, objects, Level.current_level)
         diff_c = perso.column-diff_c
         diff_l = perso.line-diff_l
+        wanted_nextpos.line = wanted_nextpos.line+diff_l
+        wanted_nextpos.column = wanted_nextpos.column+diff_c
       end
-      wanted_nextpos.line = wanted_nextpos.line+diff_l
-      wanted_nextpos.column = wanted_nextpos.column+diff_c
       if (diff_c == 0 and diff_l == 0)then 
         print("end 1  diff l, c : "..diff_l..", "..diff_c)
         break 
       end
             
       CanPass = canPass({line = wanted_nextpos.line, column = wanted_nextpos.column})
+      if (not CanPass )then
+        print("cant pass : "..wanted_nextpos.line..", "..wanted_nextpos.column)
+      end
       if (CanPass) then
         if (map.map_objects[wanted_nextpos.line][wanted_nextpos.column] == 6 or map.map_objects[perso.line][wanted_nextpos.column] == 7) then
           CanPass = canPass({line = (wanted_nextpos.line-perso.line)*2+perso.line, column = (wanted_nextpos.column-perso.column)*2+perso.column})
@@ -629,6 +653,8 @@ function move_perso(wanted_nextpos, fctMove)
           break
         end
       end
+      
+      
     end
     if (not canPass )then
       print("cant pass")

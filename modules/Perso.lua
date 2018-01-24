@@ -109,10 +109,30 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
       _perso.scale_sign = 1
        
       _perso.move()
-       
+       local continuer = false
       if push_case then
         local pos_case = {line = _perso.line+1, column = _perso.column}
-        _perso.push_case(pos_case, pMap, pObjects, pLvl)
+        if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
+          continuer = true
+        else
+          _perso.push_case(pos_case, pMap, pObjects, pLvl)
+        end
+        local tmp_perso_pos = {line = _perso.line, column = _perso.column}
+        while (continuer) do
+          if (pMap.map_set[pos_case.line][pos_case.column] ~= 4) then continuer = false end
+          _perso.push_case(pos_case, pMap, pObjects, pLvl)
+          pos_case = {line = pos_case.line+1, column = pos_case.column}
+          _perso.line = _perso.line+1
+          if (pos_case.line<=map.nb_tile_height and pos_case.line>=1 and pos_case.column<=map.nb_tile_width and pos_case.column>=1) then
+            if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
+              continuer = true
+            end
+          else
+            continuer = false
+          end
+        end
+        _perso.line = tmp_perso_pos.line
+        _perso.column = tmp_perso_pos.column
       end
     end
   end
@@ -137,7 +157,27 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
       
       if push_case then
         local pos_case = {line = _perso.line-1, column = _perso.column}
-        _perso.push_case(pos_case, pMap, pObjects, pLvl)
+        if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
+          continuer = true
+        else
+          _perso.push_case(pos_case, pMap, pObjects, pLvl)
+        end
+        local tmp_perso_pos = {line = _perso.line, column = _perso.column}
+        while (continuer) do
+          if (pMap.map_set[pos_case.line][pos_case.column] ~= 4) then continuer = false end
+          _perso.push_case(pos_case, pMap, pObjects, pLvl)
+          pos_case = {line = pos_case.line-1, column = pos_case.column}
+          _perso.line = _perso.line-1
+          if (pos_case.line<=map.nb_tile_height and pos_case.line>=1 and pos_case.column<=map.nb_tile_width and pos_case.column>=1) then
+            if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
+              continuer = true
+            end
+          else
+            continuer = false
+          end
+        end
+        _perso.line = tmp_perso_pos.line
+        _perso.column = tmp_perso_pos.column
       end
     end
   end
@@ -162,7 +202,27 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
       
       if push_case then
         local pos_case = {line = _perso.line, column = _perso.column-1}
-        _perso.push_case(pos_case, pMap, pObjects, pLvl)
+        if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
+          continuer = true
+        else
+          _perso.push_case(pos_case, pMap, pObjects, pLvl)
+        end
+        local tmp_perso_pos = {line = _perso.line, column = _perso.column}
+        while (continuer) do
+          if (pMap.map_set[pos_case.line][pos_case.column] ~= 4) then continuer = false end
+          _perso.push_case(pos_case, pMap, pObjects, pLvl)
+          pos_case = {line = pos_case.line, column = pos_case.column-1}
+          _perso.column = _perso.column-1
+          if (pos_case.line<=map.nb_tile_height and pos_case.line>=1 and pos_case.column<=map.nb_tile_width and pos_case.column>=1) then
+            if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
+              continuer = true
+            end
+          else
+            continuer = false
+          end
+        end
+        _perso.line = tmp_perso_pos.line
+        _perso.column = tmp_perso_pos.column
       end
     end
   end
@@ -187,13 +247,34 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
       
       if push_case then
         local pos_case = {line = _perso.line, column = _perso.column+1}
-        _perso.push_case(pos_case, pMap, pObjects, pLvl)
+        if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
+          continuer = true
+        else
+          _perso.push_case(pos_case, pMap, pObjects, pLvl)
+        end
+        local tmp_perso_pos = {line = _perso.line, column = _perso.column}
+        while (continuer) do
+          if (pMap.map_set[pos_case.line][pos_case.column] ~= 4) then continuer = false end
+          _perso.push_case(pos_case, pMap, pObjects, pLvl)
+          pos_case = {line = pos_case.line, column = pos_case.column+1}
+          _perso.column = _perso.column+1
+          if (pos_case.line<=map.nb_tile_height and pos_case.line>=1 and pos_case.column<=map.nb_tile_width and pos_case.column>=1) then
+            if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
+              continuer = true
+            end
+          else
+            continuer = false
+          end
+        end
+        _perso.line = tmp_perso_pos.line
+        _perso.column = tmp_perso_pos.column
       end
     end
   end
   
   _perso.push_case = function (pos_case, pMap, pObjects, pLvl) 
     local size = #pObjects
+    print("yeah : "..pos_case.line..", "..pos_case.column)
     for i = 1, size do
       if (pObjects[i].line == _perso.line and pObjects[i].column == _perso.column and (pObjects[i].id == 6 or pObjects[i].id == 7)) then
         if (pObjects[i].under ~= nil) then
@@ -233,7 +314,7 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
         
         pObjects[i].line = pos_case.line
         pObjects[i].column = pos_case.column
-        
+        print("pObjects[i].line, pObjects[i].column ! "..pObjects[i].line..", "..pObjects[i].column)
         local tmp_posgoal = _Perso.TabPos2Pos(pObjects[i].line, pObjects[i].column, pObjects[i].width, pObjects[i].height, _perso.pos_start)
         tmp_posgoal.x = tmp_posgoal.x-pObjects[i].width/2
         tmp_posgoal.y = tmp_posgoal.y-pObjects[i].height/2

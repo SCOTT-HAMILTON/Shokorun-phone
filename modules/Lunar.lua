@@ -27,6 +27,7 @@ function _Lunar:update(dt, angle)
           lunar_ship.pos.x = width 
           lunar_ship.pos.y = height-lunar_ship.pos.y
         end
+        
         if (lunar_ship.pos.x>width)then 
           lunar_ship.pos.x = 0
           lunar_ship.pos.y = height-lunar_ship.pos.y
