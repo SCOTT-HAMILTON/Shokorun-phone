@@ -12,49 +12,40 @@ box stone         -- 7
 button stone on   -- 8
 button stone off  -- 9
 button wood on    -- 10
-button wood off   -- 11 
-box wood floating -- 12
-box stone floating-- 13
-]]
+button wood off   -- 11 ]]
 
---[[
-lvl.set = {
-  {1, 1, 1},
-  {1, 1, 1},
-  {1, 1, 1}
-}
-
-lvl.objects = {
-  {0, 0, 0},
-  {0, 0, 0},
-  {0, 0, 0},
-}
-]]
 
 lvl.set = {
-  {1, 1, 1, 1, 1, 1},
-  {1, 1, 1, 1, 1, 1},
-  {1, 1, 1, 1, 3, 1},
-  {1, 1, 1, 1, 1, 1},
-  {1, 1, 1, 1, 1, 1}
+  {1, 1, 1, 1, 1},
+  {1, 1, 1, 1, 1},
+  {1, 1, 1, 1, 1},
+  {4, 4, 4, 4, 4},
+  {4, 4, 4, 4, 4},
+  {4, 4, 4, 4, 4},
+  {4, 4, 4, 4, 4},
+  {1, 1, 1, 1, 1}
+          
 }
+
 
 lvl.objects = {
-  { 0, 0, 0, 0, 0, 0},
-  { 0, 0, 0, 0, 7, 0},
-  { 0, 0, 0, 6, 0, 0},
-  { 0, 0, 0, 0, 0, 0},
-  { 0, 0, 0, 0, 0, 0}
+  { 0, 0, 0, 0, 0},
+  { 0, 0, 0, 0, 0},
+  { 6, 6, 6, 6, 6},
+  { 0, 0, 0, 0, 0},
+  { 0, 0, 0, 0, 0},
+  { 0, 0, 0, 0, 0},
+  { 0, 0, 0, 0, 0},
+  { 11, 11, 11, 11, 11}   
 }
-
 
 lvl.pStart = {line = 1, column = 1}
 
 lvl.move = {gold = 10, silver = 15, wood = 25 }
 
 lvl.gate = {}
-lvl.gate.line = 2
-lvl.gate.column = 2
+lvl.gate.line = 1
+lvl.gate.column = 3
 
 lvl.gate.pos = {x = 0, y = 0}
 

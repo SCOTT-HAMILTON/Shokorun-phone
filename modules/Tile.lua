@@ -3,6 +3,7 @@ _Tile.tile_width = 32
 _Tile.tile_height = 32
 _Tile.pattern = {width = 1, height = 1}
 _Tile.scale = {x = 1, y = 1}
+_Tile.tile_set = {}
 
 _Tile.newTile = function(pLine, pColumn, pPos, pTile_base_pattern)
   local _tile = {}
@@ -22,6 +23,8 @@ _Tile.newTile = function(pLine, pColumn, pPos, pTile_base_pattern)
   
   _tile.isunder = false
   
+  _tile.map_start = {x = 0, y = 0}
+  
   if (_tile.id <=5) then
     _Tile.tile_width = _tile.width
     _Tile.tile_height = _tile.height
@@ -34,7 +37,7 @@ _Tile.newTile = function(pLine, pColumn, pPos, pTile_base_pattern)
   
   _tile.offset = {x = 0, y = 0}
   
-  _tile.object_falled = false
+  _tile.object_inhole = false
   
   _tile.inhole = {exist = false}
   _tile.exist = true
@@ -42,9 +45,18 @@ _Tile.newTile = function(pLine, pColumn, pPos, pTile_base_pattern)
   
   
   _tile.falled = false
-  
+  _tile.update_z = function()
+    _tile.z = _tile.map_start.y-_tile.pos.y
+    if (_Tile.isBox(_tile.id)) then
+      _tile.z = _tile.map_start.y-(_tile.pos.y+_tile.image:getHeight()*0.6*_Tile.scale.y) 
+    elseif (_Tile.isObject(_tile.id))then
+      _tile.z = _tile.map_start.y-(_tile.pos.y+_tile.image:getHeight()*0.15*_Tile.scale.y) 
+    end
+  end
   _tile.update = function(map_start)
-    if (not _tile.falled)then _tile.z = map_start.y-_tile.pos.y end
+    if (not _tile.falled)then
+      _tile.update_z(map_start)
+    end
     if (_tile.moving) then
       if _tile.pos.x~=_tile.pos_goal.x or _tile.pos.y~=_tile.pos_goal.y then
         _tile.ease.time = socket.gettime()*1000
@@ -95,7 +107,7 @@ _Tile.newTile = function(pLine, pColumn, pPos, pTile_base_pattern)
     _tile.pos.x = _tile.pos_goal.x
     _tile.pos.y = _tile.pos_goal.y
     _tile.setMoving({x = _tile.pos.x, y = _tile.pos.y + height+100}, 1000, Tile.fallEase)
-    _tile.z = map_start.y-_tile.pos.y
+    _tile.update_z(map_start)
   end
   
   return _tile
@@ -213,10 +225,30 @@ _Tile.init = function(table, tile)
 			}
 	for i=1, #images do -- chargement des images
 		table[i] = tile.newTileBase( images[i], i)
+    _Tile.tile_set[i] = tile.newTileBase( images[i], i)
 	end
 	
 	
 end
 
+_Tile.isBox = function(id)
+  return id == 6 or id == 7
+end
+
+_Tile.isPerso = function(id)
+  return id == 1000000
+end
+
+_Tile.isButton = function(id)
+  return id >= 8 and id <= 11
+end
+
+_Tile.isTileGround = function(id)
+  return id >= 1 and id <= 5
+end
+
+_Tile.isObject = function(id)
+  return id > 5 and id <= #_Tile.tile_set
+end
 
 return _Tile

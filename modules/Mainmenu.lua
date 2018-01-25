@@ -4,7 +4,7 @@ _mainMenu = {
 	posY = 30
 }
 
-menu = {
+local menu = {
 	{"Start", "Option"},
 	Option = {"SFX", "Music", "Reset", "Back"}
 	}

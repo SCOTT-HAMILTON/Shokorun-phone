@@ -39,7 +39,9 @@ draw_list = {}
 
 map_start = {x = 0, y = 0}
 
-
+touch_screen = false
+touch_presspos = {x = 0, y = 0}
+touch_pos = {x = 0, y = 0}
 
 backgroundColor = gradient {   -- degradé de couleur pour l'arrière plan
     direction = 'horizontal';
@@ -52,9 +54,7 @@ currentScene = "TITLESCREEN" -- permet de changer la scene
 --=                     LOAD                       =--
 ------------------------------------------------------
 
-touch_screen = false
-touch_presspos = {x = 0, y = 0}
-touch_pos = {x = 0, y = 0}
+
 
 function love.load()
   Font = love.graphics.newFont("images/font/Pixeled.ttf", 18)
@@ -65,7 +65,7 @@ function love.load()
   mainMenu:load()
   levelSelect:load()
   loadLevel()
-  
+  pause:load()
 end
 
 ------------------------------------------------------
@@ -73,7 +73,6 @@ end
 ------------------------------------------------------
 
 function love.update(dt)
-  
   if (touch_screen and (touch_presspos.x ~= touch_pos.x or touch_presspos.y ~= touch_pos.y)) then
     
     local dist = distance(touch_presspos, touch_pos)
@@ -94,6 +93,7 @@ function love.update(dt)
   end
   
 	if currentScene == "MAINGAME" then
+ 
     local angle = p2angle(lunar_ship.pos, touch_pos)
     lunar:update(dt, angle)
     
@@ -107,7 +107,6 @@ function love.update(dt)
         objects[i].exist = false
         table.remove(objects, i)
         i = i-1
-        print("pio")
       end
     end
     
@@ -162,15 +161,8 @@ function love.draw()
     drawinrect(backgroundColor, 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
     levelSelect:draw()
   elseif currentScene == "MAINGAME" then
-    if pause.enable == true then
-      love.graphics.setColor(0,255, 255, 50)
-      love.graphics.rectangle("fill",0, 0, love.graphics.getWidth() ,love.graphics.getHeight())
-      love.graphics.setColor(255,255, 255, 255)
-    end
-    --love.graphics.clear()
     
-    if pause.enable == false then
-      love.graphics.setColor(255,255, 255, 255)
+    love.graphics.setColor(255,255, 255, 255)
       drawinrect(backgroundColor, 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
     
         love.graphics.push()
@@ -197,8 +189,8 @@ function love.draw()
             pos.y = draw_list[i].pos.y
           end
         end
-        --love.graphics.rectangle("fill", perso.pos.x, perso.pos.y, 10, 10)
-        --love.graphics.rectangle("fill", pos.x, pos.y, 30, 30)
+        
+
         love.graphics.pop()
         
         if (lunar_mode) then
@@ -206,10 +198,13 @@ function love.draw()
           if (lunar_ship.fire_on) then
             love.graphics.draw(lunar_ship.fire, lunar_ship.pos.x, lunar_ship.pos.y, math.rad(lunar_ship.r), Tile.scale.x, Tile.scale.y, lunar_ship.fire:getWidth()-5, lunar_ship.fire:getHeight()/2)
           end
+
+       
+
         end
-      
-      end --pause enable
-      --DEBUG
+    --AFFICHAGE DE L'ECRAN PAUSE
+    pause:draw()
+     --DEBUG
         love.graphics.print(tostring(pause.enable) , 0, 10)
       end
      
@@ -253,7 +248,6 @@ function key_is_pressed(key)
         move_perso(wanted_nextpos, perso.up)
       elseif key == "down" then
         local wanted_nextpos = {line = perso.line-1, column = perso.column}
-        print("wanted_next c : ")
         move_perso(wanted_nextpos, perso.down)
       elseif key == "right" then
         local wanted_nextpos = {line = perso.line, column = perso.column-1}
@@ -276,6 +270,7 @@ function key_is_pressed(key)
             if objects[i].line == prec_pos.line and objects[i].column == prec_pos.column then
               objects[i].id = objects[i].id+1
               Level.current_level.nb_buttons_succed = Level.current_level.nb_buttons_succed-1
+              print("box out button")
               map.map_objects[prec_pos.line][prec_pos.column] = objects[i].id
               objects[i].image = tile_set[objects[i].id].image
               break
@@ -289,6 +284,7 @@ function key_is_pressed(key)
             if (objects[i].id == 9 or objects[i].id == 11) then
               objects[i].id = objects[i].id-1
               Level.current_level.nb_buttons_succed = Level.current_level.nb_buttons_succed+1
+              print("box in button")
               map.map_objects[perso.line][perso.column] = objects[i].id
               objects[i].image = tile_set[objects[i].id].image
             end
@@ -331,7 +327,9 @@ function key_is_pressed(key)
         end
       end
     end
-  end -- pause
+  end -- pause enable false
+
+  if pause.enable then pause:controller(key) end
 
   end  -- end level select 
 end --end keypressed
@@ -402,7 +400,7 @@ function inScreen(pLine, pColumn)
     pColumn>=1)
 end
 
-function canPass(nextPos)
+function canPass(nextPos, id)
   if (lunar_mode)then return false end
   if (
     nextPos.line<=map.nb_tile_height and 
@@ -410,6 +408,10 @@ function canPass(nextPos)
     nextPos.column<=map.nb_tile_width and
     nextPos.column>=1
     ) then
+    
+    if (Tile.isPerso(id) and map.map_set[nextPos.line][nextPos.column] == 3) then
+      return false
+    end
     
     if ( not(
       (
@@ -449,6 +451,7 @@ function loadLevel()
   
   Level.current_level.gate.image = Level.current_level.gate.images.close
   Level.current_level.nb_buttons_succed = 0
+  print("init buttons succed")
     
   local scale_x = 4
   local scale_y = scale_x
@@ -538,32 +541,6 @@ function updateDrawList()
         
         base = a.z>b.z
         
-        if (a.name == "perso") then
-          if (a.falled)then return base end
-          return false
-        end
-        if (b.name == "perso") then
-          if (b.falled)then return base end
-          return true
-        end
-        
-        
-        
-        if (a.object_falled and (b.id == 6 or b.id == 7)) then return true end
-        if (b.object_falled and (a.id == 6 or a.id == 7)) then return false end
-        
-        if (a.id == 6 or a.id == 7) and (b.id >= 8  and b.id <= 11) then
-          return false
-        elseif (b.id == 6 or b.id == 7) and (a.id >= 8  and a.id <= 11) then
-          return true
-        end
-        
-        if (a.id>5 and not a.falled and b.id <= 5)then
-          return false
-        elseif (b.id>5 and not b.falled and a.id <= 5)then
-          return true
-        end
-        
         return base
         
       end
@@ -575,10 +552,10 @@ end
 
 
 function move_perso(wanted_nextpos, fctMove)
-  local CanPass = canPass(wanted_nextpos)
+  local CanPass = canPass(wanted_nextpos, perso.id)
   if (CanPass) then
     if (map.map_objects[wanted_nextpos.line][wanted_nextpos.column] == 6 or map.map_objects[wanted_nextpos.line][wanted_nextpos.column] == 7) then
-      CanPass = canPass({line = (wanted_nextpos.line-perso.line)*2+perso.line, column = (wanted_nextpos.column-perso.column)*2+perso.column})
+      CanPass = canPass({line = (wanted_nextpos.line-perso.line)*2+perso.line, column = (wanted_nextpos.column-perso.column)*2+perso.column}, 6)
     end
   end
   local fall = false
@@ -601,7 +578,7 @@ function move_perso(wanted_nextpos, fctMove)
     return false
   end
   
- if (CanPass) then
+  if (CanPass) then
     local diff_c = 0
     local diff_l = 0
     glass_under = map.map_set[wanted_nextpos.line][wanted_nextpos.column] == 4
@@ -612,16 +589,14 @@ function move_perso(wanted_nextpos, fctMove)
     diff_l = perso.line-diff_l
     wanted_nextpos.line = wanted_nextpos.line+diff_l
     wanted_nextpos.column = wanted_nextpos.column+diff_c
-    CanPass = canPass({line = wanted_nextpos.line, column = wanted_nextpos.column})
+    CanPass = canPass({line = wanted_nextpos.line, column = wanted_nextpos.column}, perso.id)
     if (CanPass) then
       if (map.map_objects[wanted_nextpos.line][wanted_nextpos.column] == 6 or map.map_objects[wanted_nextpos.line][wanted_nextpos.column] == 7) then
-        CanPass = canPass({line = (wanted_nextpos.line-perso.line)*2+perso.line, column = (wanted_nextpos.column-perso.column)*2+perso.column})
+        CanPass = canPass({line = (wanted_nextpos.line-perso.line)*2+perso.line, column = (wanted_nextpos.column-perso.column)*2+perso.column}, 6)
       end
     end
     
     while (CanPass and glass_under) do
-      print("started ! ")
-      print("wanted next : "..wanted_nextpos.line..", "..wanted_nextpos.column)
       if (map.map_set[wanted_nextpos.line][wanted_nextpos.column] == 4) then
         diff_c = perso.column
         diff_l = perso.line
@@ -636,13 +611,13 @@ function move_perso(wanted_nextpos, fctMove)
         break 
       end
             
-      CanPass = canPass({line = wanted_nextpos.line, column = wanted_nextpos.column})
+      CanPass = canPass({line = wanted_nextpos.line, column = wanted_nextpos.column}, perso.id)
       if (not CanPass )then
         print("cant pass : "..wanted_nextpos.line..", "..wanted_nextpos.column)
       end
       if (CanPass) then
         if (map.map_objects[wanted_nextpos.line][wanted_nextpos.column] == 6 or map.map_objects[perso.line][wanted_nextpos.column] == 7) then
-          CanPass = canPass({line = (wanted_nextpos.line-perso.line)*2+perso.line, column = (wanted_nextpos.column-perso.column)*2+perso.column})
+          CanPass = canPass({line = (wanted_nextpos.line-perso.line)*2+perso.line, column = (wanted_nextpos.column-perso.column)*2+perso.column}, 6)
         end
       end
       if CanPass then
@@ -655,9 +630,6 @@ function move_perso(wanted_nextpos, fctMove)
       end
       
       
-    end
-    if (not canPass )then
-      print("cant pass")
     end
     
   end

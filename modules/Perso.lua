@@ -34,12 +34,11 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
   
   _perso.map_start = map_start
   _perso.tmp_co = _perso.image:getHeight()*0.5*p_Tile.scale.y
-  _perso.z = _perso.map_start.y-(_perso.pos.y+_perso.tmp_co)
+  _perso.z = -1000
   
   _perso.falled = false
   
   _perso.update = function(dt)
-    if (not _perso.falled) then _perso.z = _perso.map_start.y-(_perso.pos.y+_perso.tmp_co) end
     if (_perso.moving) then
       if (#_perso.pos_goals < 1) then
         perso.moving = false
@@ -97,6 +96,7 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
     
     if (pMap.map_objects[_perso.line+1][_perso.column] == 6 or pMap.map_objects[_perso.line+1][_perso.column] == 7) then
       push_case = true
+      print("push case!!")
       if _perso.line+2>_Perso.map.nb_tile_height then
         can = false
       elseif (pMap.map_objects[_perso.line+2][_perso.column] == 6 or pMap.map_objects[_perso.line+2][_perso.column] == 7) then
@@ -111,6 +111,7 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
       _perso.move()
        local continuer = false
       if push_case then
+        print("push case!!")
         local pos_case = {line = _perso.line+1, column = _perso.column}
         if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
           continuer = true
@@ -274,13 +275,13 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
   
   _perso.push_case = function (pos_case, pMap, pObjects, pLvl) 
     local size = #pObjects
-    print("yeah : "..pos_case.line..", "..pos_case.column)
     for i = 1, size do
       if (pObjects[i].line == _perso.line and pObjects[i].column == _perso.column and (pObjects[i].id == 6 or pObjects[i].id == 7)) then
         if (pObjects[i].under ~= nil) then
           if (pObjects[i].under.id >= 8 and pObjects[i].under.id <= 11) then
             if (not (pObjects[i].id == 6 and pObjects[i].under.id == 9)) then
               pLvl.nb_buttons_succed = pLvl.nb_buttons_succed-1
+              print("box quit button")
             end
           end
           pObjects[i].under.isunder = false
@@ -292,8 +293,9 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
           for j = 1, #pObjects do
             if pObjects[j] == nil then break end
             if (pObjects[j].line == pos_case.line and pObjects[j].column == pos_case.column) then
-              if (not (pObjects[i].id == 6 and pObjects[j].id == 9)) then
+              if (not (pObjects[i].id == 6 and pObjects[j].id == 9) and (pObjects[j].id >= 8 and pObjects[j].id <= 11)) then
                 pLvl.nb_buttons_succed = pLvl.nb_buttons_succed+1
+                print("box on button")
               end
               pObjects[i].under = pObjects[j]
               pObjects[i].under.isunder = true
@@ -314,7 +316,6 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
         
         pObjects[i].line = pos_case.line
         pObjects[i].column = pos_case.column
-        print("pObjects[i].line, pObjects[i].column ! "..pObjects[i].line..", "..pObjects[i].column)
         local tmp_posgoal = _Perso.TabPos2Pos(pObjects[i].line, pObjects[i].column, pObjects[i].width, pObjects[i].height, _perso.pos_start)
         tmp_posgoal.x = tmp_posgoal.x-pObjects[i].width/2
         tmp_posgoal.y = tmp_posgoal.y-pObjects[i].height/2
@@ -325,9 +326,11 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
         if (pMap.map_set[pos_case.line][pos_case.column] == 3 and pObjects[i].id == 6)then
           pObjects[i].id = 12
           pObjects[i].image = pMap.tile_set[12].image
+          pMap.map_set[pos_case.line][pos_case.column] = -1
         elseif (pMap.map_set[pos_case.line][pos_case.column] == 3 and pObjects[i].id == 7)then
-          pObjects[i].id = 13
-          pObjects[i].image = pMap.tile_set[13].image
+          table.remove(pObjects, i)
+          size = size-1
+          break
         end
         if (pMap.map_set[pos_case.line][pos_case.column] == 0) then
           pObjects[i].setMoving(tmp_posgoal)
@@ -347,7 +350,7 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
     _perso.falled = true
     _perso.moving = false
     _perso.move()
-    perso.z = _perso.map_start.y-(_perso.pos_goals[#_perso.pos_goals].y+_perso.tmp_co)
+    perso.z = _perso.map_start.y-(_perso.pos_goals[#_perso.pos_goals].y+_perso.tmp_co)-550
     _perso.pos_goals[#_perso.pos_goals].y = _perso.pos_goals[#_perso.pos_goals].y+1000
     _perso.ease.duration = 2000
     _perso.ease.fct = persoFallEase

@@ -1,8 +1,8 @@
 _levelSelect = {}
 
-bg_image = love.graphics.newImage( "images/ui/lvlselect/bg_card.png" )
-cardImg = love.graphics.newImage( "images/ui/lvlselect/card.png" )
-starImg = love.graphics.newImage( "images/ui/lvlselect/starsEndLevel.png" )
+local bg_image = love.graphics.newImage( "images/ui/lvlselect/bg_card.png" )
+local cardImg = love.graphics.newImage( "images/ui/lvlselect/card.png" )
+local starImg = love.graphics.newImage( "images/ui/lvlselect/starsEndLevel.png" )
 
 local moveX = 0
 local moveY = 0
@@ -67,7 +67,7 @@ function _levelSelect:draw()
     love.graphics.setColor(255,255, 255, 255)
     
     -- draw card
-    for i = 1, #_levelSelect.lvlFiles - 1 do 
+    for i = 1, #_levelSelect.lvlFiles do 
         
             local posX = (100 * posXn) - 80
             local posY = (100 * posYn) - 80 
@@ -114,7 +114,7 @@ end
 function _levelSelect:controller(key)
     
     --selector move
-    if key == "right" and selector.val < #_levelSelect.lvlFiles - 1 then
+    if key == "right" and selector.val < #_levelSelect.lvlFiles  then
         if selector.posX < 5 or selector.posY < 3 then
             selector.posX = selector.posX + 1
         end
@@ -135,7 +135,7 @@ function _levelSelect:controller(key)
     if key == "up" and selector.posY > 1 then
         selector.posY = selector.posY - 1
     end
-    if key == "down" and selector.posY < 3  and selector.val + 5 <= #_levelSelect.lvlFiles - 1 then
+    if key == "down" and selector.posY < 3  and selector.val + 5 <= #_levelSelect.lvlFiles  then
         selector.posY = selector.posY + 1
     end
 

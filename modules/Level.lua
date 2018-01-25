@@ -5,7 +5,7 @@ _Level.levels = {}
 local dir = "/level"
 _Level.lvlFiles = love.filesystem.getDirectoryItems(dir)
 
-for i = 1, #_Level.lvlFiles -1 do
+for i = 1, #_Level.lvlFiles  do
 	table.insert(_Level.levels, require("../level/lvl_"..i))
 end
 
