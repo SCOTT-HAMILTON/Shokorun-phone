@@ -14,9 +14,13 @@ _Level.current_level = _Level.levels[_Level.index_level]
 
 _Level.goToNextLevel = function()
   _Level.index_level = _Level.index_level+1
+  print("#_Level.levels : "..#_Level.levels)
+  print("#_Level.index_level : ".._Level.index_level)
   if _Level.index_level>#_Level.levels then
     _Level.index_level = 1
   end
+  
+  print("#_Level.index_level : ".._Level.index_level)
   
   _Level.current_level = _Level.levels[_Level.index_level]
 end

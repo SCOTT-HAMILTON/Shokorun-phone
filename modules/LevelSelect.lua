@@ -169,6 +169,10 @@ function chooseLevel()
     
 end
 
+function _levelSelect:getVal()
+  return selector.val
+end
+
 function creatCardBg()
     love.graphics.setColor(255,255,255,255)
     for i=1, iLevel do

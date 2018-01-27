@@ -29,10 +29,10 @@ pause = require("modules/Pause")
 --=                TABLE & VAR                     =--
 ------------------------------------------------------
 
+
 tiles_ground = {}
 objects = {}
 tile_set = {}
-map_pos = {x = 150, y = 200}
 map = {}
 perso = {}
 draw_list = {}
@@ -42,6 +42,8 @@ map_start = {x = 0, y = 0}
 touch_screen = false
 touch_presspos = {x = 0, y = 0}
 touch_pos = {x = 0, y = 0}
+touch_timer = 0
+touch_starttime = 0
 
 backgroundColor = gradient {   -- degradé de couleur pour l'arrière plan
     direction = 'horizontal';
@@ -66,6 +68,7 @@ function love.load()
   levelSelect:load()
   loadLevel()
   pause:load()
+  
 end
 
 ------------------------------------------------------
@@ -73,7 +76,15 @@ end
 ------------------------------------------------------
 
 function love.update(dt)
-  if (touch_screen and (touch_presspos.x ~= touch_pos.x or touch_presspos.y ~= touch_pos.y)) then
+  if (currentScene == "LEVELSELECT" and touch_screen) then
+    touch_timer = socket.gettime()*1000
+    if (touch_timer-touch_starttime>1000) then
+      key_is_pressed("space")
+      touch_screen = false
+    end
+  end
+  
+  if (touch_screen and (touch_presspos.x ~= touch_pos.x or touch_presspos.y ~= touch_pos.y) and currentScene == "MAINGAME") then
     
     local dist = distance(touch_presspos, touch_pos)
     if (dist > 50) then
@@ -97,7 +108,7 @@ function love.update(dt)
     local angle = p2angle(lunar_ship.pos, touch_pos)
     lunar:update(dt, angle)
     
-    perso.update(dt)
+    perso.update(dt, angle)
     local nb_hole = 0
     local falled_obj = false
     for i = 1, #objects do
@@ -111,8 +122,13 @@ function love.update(dt)
     end
     
     for i = 1, #tiles_ground do
-      if (not tiles_ground[i].inhole.exist and tiles_ground[i].object_falled) then
-        tiles_ground[i].object_falled = false
+      tiles_ground[i].update(map_start)
+      if (tiles_ground[i].line == 3 and tiles_ground[i].column == 5) then
+        --print("tiles_ground[i].z : "..tiles_ground[i].z.." l, c "..tiles_ground[i].line..", "..tiles_ground[i].column)
+      end
+      if (not tiles_ground[i].inhole.exist and tiles_ground[i].object_inhole) then
+        print("tiles_ground delte in hole: "..", pos : "..tiles_ground[i].line..", "..tiles_ground[i].column..", id : "..", "..tiles_ground[i].id..", "..tiles_ground[i].inhole.id)
+        tiles_ground[i].object_inhole = false
         tiles_ground[i].inhole = {exist = false}
       end
     end
@@ -190,6 +206,7 @@ function love.draw()
           end
         end
         
+        love.graphics.rectangle("fill", 550, 683-15, 50, 50)
 
         love.graphics.pop()
         
@@ -226,6 +243,7 @@ function key_is_pressed(key)
     mainMenu:controller(key)
   elseif currentScene == "LEVELSELECT" then
     levelSelect:controller(key)
+    Level.index_level = levelSelect:getVal()
 	elseif currentScene == "MAINGAME" then  -- IN GAME CONTROLL
     pause:ingame(key)
     if pause.enable == false then
@@ -295,7 +313,6 @@ function key_is_pressed(key)
       end
       
       if (Level.current_level.nb_buttons_succed == Level.current_level.nb_buttons) then
-        print("finish ca mere!!")
         Level.current_level.gate.image = Level.current_level.gate.images.open
       else
         Level.current_level.gate.image = Level.current_level.gate.images.close
@@ -316,11 +333,10 @@ function key_is_pressed(key)
           objects[i].fall()
           for j = 1, #tiles_ground do
             if tiles_ground[j].line == objects[i].line and tiles_ground[j].column == objects[i].column then
-              tiles_ground[j].object_falled = true
-              print("fhdjshfkjds")
+              tiles_ground[j].object_inhole = true
               tiles_ground[j].inhole = objects[i]
+              print("tiles_ground : "..tiles_ground[j].inhole.id)
               tiles_ground[j].inhole.exist = true
-              table.insert(tiles_ground, j, objects[i])
               break
             end
           end
@@ -334,13 +350,17 @@ function key_is_pressed(key)
   end  -- end level select 
 end --end keypressed
 
+
 function love.touchpressed(id, x, y)
   touch_pos.x = x
   touch_pos.y = y
   touch_presspos.x = x
   touch_presspos.y = y
   
-  key_is_pressed("space")
+  if (currentScene == "LEVELSELECT") then
+  else
+    key_is_pressed("space")
+  end
   
   touch_screen = true
 end
@@ -365,7 +385,12 @@ function love.mousepressed(x, y)
   touch_presspos.x = x
   touch_presspos.y = y
   
-  key_is_pressed("space")
+  if (currentScene == "LEVELSELECT") then
+    touch_starttime = socket.gettime()*1000
+    touch_timer = socket.gettime()*1000
+  else
+    key_is_pressed("space")
+  end
   
   touch_screen = true
 end
@@ -382,9 +407,6 @@ end
 function love.mousemoved(x, y)
   touch_pos.x = x
   touch_pos.y = y
-end
-
-function love.keyreleased(key)
 end
 
 function distance(a, b)
@@ -445,7 +467,6 @@ function loadLevel()
   objects = {}
   tile_set = {}
 
-  map_pos = {x = 150, y = 200}
   map = {}
   perso = {}
   
@@ -474,7 +495,7 @@ function loadLevel()
     end
   end
   
-  map.pos_start = Tile.initTiles(map.map_set, tiles_ground, map.nb_tile_width, map.nb_tile_height, map_pos, {width = Tile.tile_width*Tile.scale.x, height = 16*Tile.scale.y})
+  map.pos_start = Tile.initTiles(map.map_set, tiles_ground, map.nb_tile_width, map.nb_tile_height, {width = Tile.tile_width*Tile.scale.x, height = 16*Tile.scale.y})
   map_start.x = map.pos_start.x+(Tile.tile_width*0.5*Tile.scale.x)
   map_start.y = map.pos_start.y+(Tile.tile_height*Tile.scale.y)
   
@@ -501,7 +522,10 @@ function loadLevel()
   Level.current_level.gate.pos.y = Level.current_level.gate.pos.y-Level.current_level.gate.image:getHeight()-Tile.tile_height*2-20
   
   if map.map_objects[perso.line][perso.column] == 9 or map.map_objects[perso.line][perso.column] == 11 then
-  end
+end
+
+pos = Perso.TabPos2Pos(1, 1, Tile.tile_width, Tile.tile_height, {x = 534, y = 672})
+  print("sstart : "..pos.x..", "..pos.y)
 end
 
 function updateDrawList() 
@@ -559,10 +583,13 @@ function move_perso(wanted_nextpos, fctMove)
     end
   end
   local fall = false
+  local type_fall = ""
   if (not inScreen(wanted_nextpos.line, wanted_nextpos.column)) then
     fall = true
+    type_fall = "border"
   elseif (map.map_set[wanted_nextpos.line][wanted_nextpos.column] == 0 or map.map_set[wanted_nextpos.line][wanted_nextpos.column] == 5) then 
     fall = true
+    if (map.map_set[wanted_nextpos.line][wanted_nextpos.column] == 5)then type_fall = "hole" end
   end
   
   if (fall) then
@@ -574,7 +601,17 @@ function move_perso(wanted_nextpos, fctMove)
     perso.pos.y = perso.pos_goals[1].y
     perso.ease.fct = _Tile.fallEase
     table.remove(perso.pos_goals, 1)
-    perso.fall()
+    perso.fall(type_fall)
+    for i = 1, #tiles_ground do
+      if (tiles_ground[i].line == wanted_nextpos.line and tiles_ground[i].column == wanted_nextpos.column) then
+        tiles_ground[i].object_inhole = true
+        tiles_ground[i].inhole = perso
+        
+        print("tiles_ground : "..", pos : "..tiles_ground[i].line..", "..tiles_ground[i].column..", id : "..", "..tiles_ground[i].id..", "..tiles_ground[i].inhole.id..", z : "..tiles_ground[i].z)
+        tiles_ground[i].inhole.exist = true
+      end
+    end
+    
     return false
   end
   
