@@ -25,6 +25,8 @@ Level = require("modules/Level")
 levelSelect = require("modules/LevelSelect")
 lunar = require("modules/Lunar")
 pause = require("modules/Pause")
+Ease = require("modules/Ease")
+
 ------------------------------------------------------
 --=                TABLE & VAR                     =--
 ------------------------------------------------------
@@ -44,6 +46,7 @@ touch_presspos = {x = 0, y = 0}
 touch_pos = {x = 0, y = 0}
 touch_timer = 0
 touch_starttime = 0
+return_pressed = false
 
 backgroundColor = gradient {   -- degradé de couleur pour l'arrière plan
     direction = 'horizontal';
@@ -56,8 +59,6 @@ currentScene = "TITLESCREEN" -- permet de changer la scene
 --=                     LOAD                       =--
 ------------------------------------------------------
 
-
-
 function love.load()
   Font = love.graphics.newFont("images/font/Pixeled.ttf", 18)
   width = love.graphics.getWidth()
@@ -68,7 +69,18 @@ function love.load()
   levelSelect:load()
   loadLevel()
   pause:load()
-  
+  plouf = love.audio.newSource("musics/plouf1.ogg", "static")
+  move_grass = love.audio.newSource("musics/move-grass.ogg", "static")
+  move_grass:setPitch(1.5)
+  move_stone = love.audio.newSource("musics/move-stone.ogg", "static")
+  move_stone:setPitch(1)
+  move_ice = love.audio.newSource("musics/move-ice.ogg", "static")
+  move_ice:setPitch(1)
+  move_box = love.audio.newSource("musics/push.ogg", "static")
+  move_box:setPitch(1)
+  move_box:setVolume(0.5)
+  perso_fall = love.audio.newSource("musics/fall.ogg", "static")
+  perso_fall:setPitch(1)
 end
 
 ------------------------------------------------------
@@ -76,39 +88,69 @@ end
 ------------------------------------------------------
 
 function love.update(dt)
+  touch_timer = socket.gettime()*1000
   if (currentScene == "LEVELSELECT" and touch_screen) then
-    touch_timer = socket.gettime()*1000
-    if (touch_timer-touch_starttime>1000) then
-      key_is_pressed("space")
+    if (touch_timer-touch_starttime>500) then
+      Level.current_level = Level.levels[levelSelect.getVal()]
+      loadLevel()
+      currentScene = "MAINGAME"
       touch_screen = false
     end
   end
   
-  if (touch_screen and (touch_presspos.x ~= touch_pos.x or touch_presspos.y ~= touch_pos.y) and currentScene == "MAINGAME") then
-    
-    local dist = distance(touch_presspos, touch_pos)
-    if (dist > 50) then
-      local dir = p2angle(touch_presspos, touch_pos)
-      if (dir >= -90 and dir < 0) then
-        key_is_pressed("up")
-      elseif (dir >= 0 and dir < 90) then
-        key_is_pressed("right")
-      elseif (dir >= 90 and dir < 180) then
-        key_is_pressed("down")
-      else
-        key_is_pressed("left")
+  if (currentScene == "LEVELSELECT" or (currentScene == "MAINGAME" and pause.enable)) then
+    if (touch_screen and (touch_presspos.x ~= touch_pos.x or touch_presspos.y ~= touch_pos.y)) then
+      
+      local dist = distance(touch_presspos, touch_pos)
+      if (dist > 50) then
+        local dir = p2angle(touch_presspos, touch_pos)
+        if (dir >= -135 and dir < -45) then
+          key_is_pressed("up")
+        elseif (dir >= -45 and dir < 45) then
+          key_is_pressed("right")
+        elseif (dir >= 45 and dir < 135) then
+          key_is_pressed("down")
+        else
+          key_is_pressed("left")
+        end
+        touch_screen = false
       end
-      touch_presspos.x = touch_pos.x
-      touch_presspos.y = touch_pos.y
     end
   end
   
-	if currentScene == "MAINGAME" then
- 
+  if (currentScene == "MAINGAME") then
+    if (touch_timer-touch_starttime>500 and touch_screen and not lunar_mode) then
+      if (not _pause.enable) then
+        _pause.enable = true
+      else
+        key_is_pressed("return")  
+      end
+      touch_screen = false
+    end
+  
+    if (touch_screen and (touch_presspos.x ~= touch_pos.x or touch_presspos.y ~= touch_pos.y)) then
+      
+      local dist = distance(touch_presspos, touch_pos)
+      if (dist > 50) then
+        local dir = p2angle(touch_presspos, touch_pos)
+        if (dir >= -90 and dir < 0) then
+          key_is_pressed("up")
+        elseif (dir >= 0 and dir < 90) then
+          key_is_pressed("right")
+        elseif (dir >= 90 and dir < 180) then
+          key_is_pressed("down")
+        else
+          key_is_pressed("left")
+        end
+        touch_presspos.x = touch_pos.x
+        touch_presspos.y = touch_pos.y
+      end
+    end
+   
     local angle = p2angle(lunar_ship.pos, touch_pos)
     lunar:update(dt, angle)
     
-    perso.update(dt, angle)
+    perso.update(dt)
     local nb_hole = 0
     local falled_obj = false
     for i = 1, #objects do
@@ -124,10 +166,8 @@ function love.update(dt)
     for i = 1, #tiles_ground do
       tiles_ground[i].update(map_start)
       if (tiles_ground[i].line == 3 and tiles_ground[i].column == 5) then
-        --print("tiles_ground[i].z : "..tiles_ground[i].z.." l, c "..tiles_ground[i].line..", "..tiles_ground[i].column)
       end
       if (not tiles_ground[i].inhole.exist and tiles_ground[i].object_inhole) then
-        print("tiles_ground delte in hole: "..", pos : "..tiles_ground[i].line..", "..tiles_ground[i].column..", id : "..", "..tiles_ground[i].id..", "..tiles_ground[i].inhole.id)
         tiles_ground[i].object_inhole = false
         tiles_ground[i].inhole = {exist = false}
       end
@@ -146,21 +186,14 @@ function love.update(dt)
         camera.setMoving(tmp_pos)
       end
     end
-    
     if (not perso.moving and perso.falled) then
-      perso = Perso.newPerso(map_start, Level.current_level.pStart.line, Level.current_level.pStart.column, {up = "images/hero/hero_frontr.png", down ="images/hero/hero_backr.png"}, Tile, map.pos_start)
+      loadLevel()
     end
     
     camera.update()
     
     updateDrawList()
-    
-    if (not inScreen(perso.line, perso.column) and not perso.moving) then
-      perso = Perso.newPerso(map_start, Level.current_level.pStart.line, Level.current_level.pStart.column, {up = "images/hero/hero_frontr.png", down ="images/hero/hero_backr.png"}, Tile, map.pos_start)
-    end
-
-	end  
-	  
+  end
 end
 
 ------------------------------------------------------
@@ -237,13 +270,16 @@ end
 ------------------------------------------------------
 
 function key_is_pressed(key)
-	if currentScene  == "TITLESCREEN" then	
+  if (not inScreen(perso.line, perso.column) or perso.falled) then
+    return false
+	end
+  
+  if currentScene  == "TITLESCREEN" then	
 		tScreen:controller(key)
 	elseif currentScene == "MAINMENU" then
     mainMenu:controller(key)
   elseif currentScene == "LEVELSELECT" then
-    levelSelect:controller(key)
-    Level.index_level = levelSelect:getVal()
+    levelSelect:controller(nil, key)
 	elseif currentScene == "MAINGAME" then  -- IN GAME CONTROLL
     pause:ingame(key)
     if pause.enable == false then
@@ -275,8 +311,7 @@ function key_is_pressed(key)
         move_perso(wanted_nextpos, perso.left)
       end
       
-      if (perso.falled) then
-        print("falled")
+      if (perso.falled or not inScreen(perso.line, perso.column)) then
         return false
       end
       
@@ -288,7 +323,6 @@ function key_is_pressed(key)
             if objects[i].line == prec_pos.line and objects[i].column == prec_pos.column then
               objects[i].id = objects[i].id+1
               Level.current_level.nb_buttons_succed = Level.current_level.nb_buttons_succed-1
-              print("box out button")
               map.map_objects[prec_pos.line][prec_pos.column] = objects[i].id
               objects[i].image = tile_set[objects[i].id].image
               break
@@ -302,7 +336,6 @@ function key_is_pressed(key)
             if (objects[i].id == 9 or objects[i].id == 11) then
               objects[i].id = objects[i].id-1
               Level.current_level.nb_buttons_succed = Level.current_level.nb_buttons_succed+1
-              print("box in button")
               map.map_objects[perso.line][perso.column] = objects[i].id
               objects[i].image = tile_set[objects[i].id].image
             end
@@ -335,7 +368,6 @@ function key_is_pressed(key)
             if tiles_ground[j].line == objects[i].line and tiles_ground[j].column == objects[i].column then
               tiles_ground[j].object_inhole = true
               tiles_ground[j].inhole = objects[i]
-              print("tiles_ground : "..tiles_ground[j].inhole.id)
               tiles_ground[j].inhole.exist = true
               break
             end
@@ -350,19 +382,22 @@ function key_is_pressed(key)
   end  -- end level select 
 end --end keypressed
 
-
 function love.touchpressed(id, x, y)
   touch_pos.x = x
   touch_pos.y = y
   touch_presspos.x = x
   touch_presspos.y = y
   
+  touch_screen = true
+  
+  touch_starttime = socket.gettime()*1000
+  touch_timer = socket.gettime()*1000
   if (currentScene == "LEVELSELECT") then
+    levelSelect:controller(touch_presspos)
+    Level.index_level = levelSelect:getVal()
   else
     key_is_pressed("space")
   end
-  
-  touch_screen = true
 end
 
 function love.touchreleased(id, x, y)
@@ -384,15 +419,16 @@ function love.mousepressed(x, y)
   touch_pos.y = y
   touch_presspos.x = x
   touch_presspos.y = y
+  touch_screen = true
   
+  touch_starttime = socket.gettime()*1000
+  touch_timer = socket.gettime()*1000
   if (currentScene == "LEVELSELECT") then
-    touch_starttime = socket.gettime()*1000
-    touch_timer = socket.gettime()*1000
+    levelSelect:controller(touch_presspos)
+    Level.index_level = levelSelect:getVal()
   else
     key_is_pressed("space")
   end
-  
-  touch_screen = true
 end
 
 function love.mousereleased(x, y)
@@ -472,7 +508,6 @@ function loadLevel()
   
   Level.current_level.gate.image = Level.current_level.gate.images.close
   Level.current_level.nb_buttons_succed = 0
-  print("init buttons succed")
     
   local scale_x = 4
   local scale_y = scale_x
@@ -525,7 +560,6 @@ function loadLevel()
 end
 
 pos = Perso.TabPos2Pos(1, 1, Tile.tile_width, Tile.tile_height, {x = 534, y = 672})
-  print("sstart : "..pos.x..", "..pos.y)
 end
 
 function updateDrawList() 
@@ -582,36 +616,9 @@ function move_perso(wanted_nextpos, fctMove)
       CanPass = canPass({line = (wanted_nextpos.line-perso.line)*2+perso.line, column = (wanted_nextpos.column-perso.column)*2+perso.column}, 6)
     end
   end
-  local fall = false
   local type_fall = ""
-  if (not inScreen(wanted_nextpos.line, wanted_nextpos.column)) then
-    fall = true
-    type_fall = "border"
-  elseif (map.map_set[wanted_nextpos.line][wanted_nextpos.column] == 0 or map.map_set[wanted_nextpos.line][wanted_nextpos.column] == 5) then 
-    fall = true
-    if (map.map_set[wanted_nextpos.line][wanted_nextpos.column] == 5)then type_fall = "hole" end
-  end
-  
-  if (fall) then
-    perso.column = wanted_nextpos.column
-    perso.line = wanted_nextpos.line
-    perso.pos_goals = {}
-    perso.move()
-    perso.pos.x = perso.pos_goals[1].x
-    perso.pos.y = perso.pos_goals[1].y
-    perso.ease.fct = _Tile.fallEase
-    table.remove(perso.pos_goals, 1)
-    perso.fall(type_fall)
-    for i = 1, #tiles_ground do
-      if (tiles_ground[i].line == wanted_nextpos.line and tiles_ground[i].column == wanted_nextpos.column) then
-        tiles_ground[i].object_inhole = true
-        tiles_ground[i].inhole = perso
-        
-        print("tiles_ground : "..", pos : "..tiles_ground[i].line..", "..tiles_ground[i].column..", id : "..", "..tiles_ground[i].id..", "..tiles_ground[i].inhole.id..", z : "..tiles_ground[i].z)
-        tiles_ground[i].inhole.exist = true
-      end
-    end
-    
+  if (shouldFall(wanted_nextpos.line, wanted_nextpos.column, type_fall)) then
+    fallPerso(wanted_nextpos)
     return false
   end
   
@@ -634,6 +641,11 @@ function move_perso(wanted_nextpos, fctMove)
     end
     
     while (CanPass and glass_under) do
+      local type_fall = ""
+      if (shouldFall(wanted_nextpos.line, wanted_nextpos.column, type_fall)) then
+        fallPerso(wanted_nextpos)
+        return false
+      end
       if (map.map_set[wanted_nextpos.line][wanted_nextpos.column] == 4) then
         diff_c = perso.column
         diff_l = perso.line
@@ -642,15 +654,20 @@ function move_perso(wanted_nextpos, fctMove)
         diff_l = perso.line-diff_l
         wanted_nextpos.line = wanted_nextpos.line+diff_l
         wanted_nextpos.column = wanted_nextpos.column+diff_c
+        if (Level.current_level.nb_buttons_succed == Level.current_level.nb_buttons and 
+            (perso.line == Level.current_level.gate.line and perso.column == Level.current_level.gate.column)
+          ) then
+          
+          lunar_mode = true
+          return false
+        end
       end
       if (diff_c == 0 and diff_l == 0)then 
-        print("end 1  diff l, c : "..diff_l..", "..diff_c)
         break 
       end
             
       CanPass = canPass({line = wanted_nextpos.line, column = wanted_nextpos.column}, perso.id)
       if (not CanPass )then
-        print("cant pass : "..wanted_nextpos.line..", "..wanted_nextpos.column)
       end
       if (CanPass) then
         if (map.map_objects[wanted_nextpos.line][wanted_nextpos.column] == 6 or map.map_objects[perso.line][wanted_nextpos.column] == 7) then
@@ -661,19 +678,44 @@ function move_perso(wanted_nextpos, fctMove)
         if (map.map_set[wanted_nextpos.line][wanted_nextpos.column] ~= 4) then
           fctMove(map, objects, Level.current_level)
           CanPass = false
-          print("end diff l, c : "..diff_l..", "..diff_c)
           break
         end
-      end
-      
-      
+      end      
     end
-    
+    local type_fall = ""
+    if (glass_under and shouldFall(wanted_nextpos.line, wanted_nextpos.column, type_fall)) then
+      fallPerso(wanted_nextpos)
+      return false
+    end
+  end
+end
+
+function shouldFall(line, column, type_fall)
+  if (not inScreen(line, column)) then
+    type_fall = "border"
+    return true
+  elseif (map.map_set[line][column] == 0 or map.map_set[line][column] == 5) then 
+    if (map.map_set[line][column] == 5)then type_fall = "hole" end
+    return true
+  end
+  return false
+end
+
+function fallPerso(wanted_nextpos)
+  perso.column = wanted_nextpos.column
+  perso.line = wanted_nextpos.line
+  perso.fall(type_fall)
+  for i = 1, #tiles_ground do
+    if (tiles_ground[i].line == wanted_nextpos.line and tiles_ground[i].column == wanted_nextpos.column) then
+      tiles_ground[i].object_inhole = true
+      tiles_ground[i].inhole = perso
+      
+      tiles_ground[i].inhole.exist = true
+    end
   end
 end
 
 function p2angle(p1, p2)
   local angle = math.deg(math.atan2(p2.y-p1.y, p2.x-p1.x))
-  print("a : "..angle)
   return angle
 end

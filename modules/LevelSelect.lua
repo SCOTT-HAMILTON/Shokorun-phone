@@ -10,6 +10,7 @@ local rOn = false
 local lOn = false
 local speedMoveMenu = 20
 local tempsLevel = 50
+local rectsCards = {}
 
 local _bg = {
     width = 500,
@@ -49,6 +50,7 @@ function  _levelSelect:load()
 end
 
 function _levelSelect:draw()
+    rectsCards = {}
     --deplacement du menu
     changeZone()
 
@@ -58,13 +60,6 @@ function _levelSelect:draw()
     -- level square
     posXn = 1
     posYn = 1
-
-    --selector var
-    selector.x = (100 * selector.posX) - 82
-    selector.y = (100 * selector.posY) - 82
-    love.graphics.setColor(0,255, 255, 255)
-    love.graphics.rectangle("fill", _bg.x + selector.x , _bg.y + selector.y,  _level.width + 5,_level.height+5, 10,10,30)
-    love.graphics.setColor(255,255, 255, 255)
     
     -- draw card
     for i = 1, #_levelSelect.lvlFiles do 
@@ -82,7 +77,18 @@ function _levelSelect:draw()
                 if i < 16 then
             --card level item
                 love.graphics.setColor(255,255,255,255)
+                local tmp_val = selector.val
+                if (tmp_val>=16) then
+                  tmp_val = tmp_val%16+1
+                end
+                if (tmp_val == i) then
+                  love.graphics.setColor(0,255, 255, 255)
+                  love.graphics.rectangle("fill", _bg.x + posX-2,  _bg.y + posY-2,  _level.width + 5,_level.height+5, 10,10,30)
+                  love.graphics.setColor(255,255, 255, 255)
+                end
                 love.graphics.draw(cardImg, _bg.x + posX,  _bg.y + posY,0, 1, 1)
+                rectsCards[#rectsCards+1] = {x = _bg.x + posX, y = _bg.y + posY}
+                
                 --love.graphics.rectangle("fill", _bg.x + posX, _bg.y + posY, _level.width,_level.height, 10,10,30)
                 love.graphics.setColor(255,0,0,255)
                 love.graphics.print(i + selector.bgPos * 15 - 15, _bg.x + posX,  _bg.y + posY,0,1.5,1.5,-15,5)
@@ -108,29 +114,22 @@ function _levelSelect:draw()
     love.graphics.print("selector.val : ".. selector.val,10,30,0,0.5,0.5)
     love.graphics.print("selector.val + 5 : ".. selector.val + 5 ,10,40,0,0.5,0.5)
     love.graphics.print("#_levelSelect.lvlFiles : ".. #_levelSelect.lvlFiles ,10,50,0,0.5,0.5)
-    
 end
 
-function _levelSelect:controller(key)
+function _levelSelect:controller(pos, key)
+  if (key ~= nil) then
     
-    --selector move
     if key == "right" and selector.val < #_levelSelect.lvlFiles  then
-        if selector.posX < 5 or selector.posY < 3 then
-            selector.posX = selector.posX + 1
-        end
-        if selector.posX % 6 == 0 then
-            selector.posX = 1
-            selector.posY = selector.posY + 1
-        end
+      if lOn == false and selector.bgPos < iLevel then
+        rOn = true
+        selector.bgPos = selector.bgPos + 1
+      end
     end
     if key == "left"  then
-        if selector.posX > 1 or selector.posY > 1 then
-            selector.posX = selector.posX - 1
-        end
-        if selector.posX % 6 == 0 then
-            selector.posX = 5
-            selector.posY = selector.posY - 1
-        end
+      if rOn == false and selector.bgPos > 1 then
+        lOn = true
+        selector.bgPos = selector.bgPos - 1
+      end
     end
     if key == "up" and selector.posY > 1 then
         selector.posY = selector.posY - 1
@@ -138,35 +137,35 @@ function _levelSelect:controller(key)
     if key == "down" and selector.posY < 3  and selector.val + 5 <= #_levelSelect.lvlFiles  then
         selector.posY = selector.posY + 1
     end
-
-    -- level select
-    if key == "space" then
-        Level.current_level = Level.levels[selector.val]
-        loadLevel()
-        currentScene = "MAINGAME"
-    else
-
+    return false
+  end
+  
+  if (touch_press or love.mouse.isDown(1)) then
+    for i = 1, #rectsCards do
+      if (p2rectCollide(rectsCards[i], pos)) then
+        local val = i
+        val = val+ (selector.bgPos-1)*5*3
+        print("val : "..val)
+        selector.val = val
+      end
     end
-
-    --selector auto next card
-    
-
-    --level select move
-    if love.keyboard.isDown( 'lshift' ) and love.keyboard.isDown( 'right' ) and lOn == false and selector.bgPos < iLevel then
-        rOn = true
-        selector.bgPos = selector.bgPos + 1
-    end
-    if love.keyboard.isDown( 'lshift' ) and love.keyboard.isDown( 'left' ) and  rOn == false and selector.bgPos > 1 then
-        lOn = true
-        selector.bgPos = selector.bgPos - 1
-    end
-
-    selector.val = selector.posX + (  selector.posY * 5 - 5 ) + (selector.bgPos * 15 - 15)
-    
+  end
 end
 
 function chooseLevel()
     
+end
+
+function p2rectCollide(rect, pos)
+  if (
+    pos.x>rect.x+cardImg:getWidth() or
+    pos.x < rect.x or
+    pos.y>rect.y+cardImg:getHeight()+4 or
+    pos.y < rect.y
+  ) then
+    return false
+  end
+  return true
 end
 
 function _levelSelect:getVal()

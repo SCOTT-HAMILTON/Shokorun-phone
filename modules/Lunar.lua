@@ -55,7 +55,6 @@ function _Lunar:update(dt, angle)
         lunar_ship.pos.y = lunar_ship.pos.y+lunar_ship.vec.y*dt
         lunar_ship.vec.x = lunar_ship.vec.x+math.cos(math.rad(lunar_ship.r))*250 *dt
         if (lunar_ship.fire_on)then 
-          print("oui")
           lunar_ship.vec.y = lunar_ship.vec.y-math.sin(math.rad(lunar_ship.r+180))*500*dt
         end
         lunar_ship.vec.y = lunar_ship.vec.y+200*dt

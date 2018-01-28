@@ -21,15 +21,18 @@ end
 
 function _pause:ingame(key)
    
-      if key == "return"  then
-        if _pause.enable == false then
-        _pause.enable = true
-        else
-        _pause.enable = false            
-        end
-      end
-      
+	if key == "return" then
+    _pause.enable = false
 
+    if _pause.showMenu[_pause.menuSelect] == "Restart" then
+      loadLevel()
+      
+    elseif _pause.showMenu[_pause.menuSelect] == "Main Menu" then
+			currentScene = "LEVELSELECT"
+		elseif _pause.showMenu[_pause.menuSelect] == "Exit Game" then
+			love.event.quit()
+		end
+	end
 
 
 end
@@ -72,20 +75,6 @@ function _pause:controller(key)
 	end
   
   
-	if key == "space" then
-    
-    _pause.enable = false
-
-    if _pause.showMenu[_pause.menuSelect] == "Restart" then
-      loadLevel()
-    elseif _pause.showMenu[_pause.menuSelect] == "Main Menu" then
-			currentScene = "LEVELSELECT"
-		elseif _pause.showMenu[_pause.menuSelect] == "Exit Game" then
-			love.event.quit()
-		end
-    
-    
-	end
 	
 end
 

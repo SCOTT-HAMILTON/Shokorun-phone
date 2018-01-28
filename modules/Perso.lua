@@ -28,9 +28,9 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
   _perso.pos.y = _perso.pos.y+_perso.offset.y
   
   _perso.pos_goals = {}
+  _perso.easings = {}
   
   _perso.moving = false
-  _perso.ease = {start = {x = 0, y = 0}, start_time = 0, time = 0, offset = {x = 0, y = 0}, duration = 50, fct = persoMovesEase}
   
   _perso.map_start = map_start
   _perso.z = -10000
@@ -38,55 +38,52 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
   _perso.falled = false
   
   _perso.update = function(dt)
-    if (_perso.moving) then
-      if (#_perso.pos_goals < 1) then
-        perso.moving = false
-        return false
-      else
-        perso.moving = true
-      end
-      if _perso.pos.x~=_perso.pos_goals[1].x or _perso.pos.y~=_perso.pos_goals[1].y then
-        _perso.ease.time = socket.gettime()*1000
-        _perso.ease.time = _perso.ease.time-_perso.ease.start_time
-        
-        _perso.pos.x = _perso.ease.fct(_perso.ease.time, _perso.ease.start.x, _perso.ease.offset.x, _perso.ease.duration)
-        _perso.pos.y = _perso.ease.fct(_perso.ease.time, _perso.ease.start.y, _perso.ease.offset.y, _perso.ease.duration)
-        if (_perso.ease.time>=_perso.ease.duration) then
-          _perso.pos.x = _perso.pos_goals[1].x
-          _perso.pos.y = _perso.pos_goals[1].y
-          if (#_perso.pos_goals>0)then
-            table.remove(_perso.pos_goals, 1)
-          end
-          if (#perso.pos_goals>0) then
-            _perso.moving = true
-            _perso.moving = true
-            
-            _perso.ease.start.x = _perso.pos.x
-            _perso.ease.start.y = _perso.pos.y
-            _perso.ease.start_time = socket.gettime()*1000
-            _perso.ease.time = 0
-            _perso.ease.offset.x = _perso.pos_goals[1].x-_perso.pos.x
-            _perso.ease.offset.y = _perso.pos_goals[1].y-_perso.pos.y
-          end
+    if (#_perso.easings < 1) then
+      perso.moving = false
+      return false
+    else
+      perso.moving = true
+    end
+    _perso.easings[1].update(_perso.pos)
+    if (not _perso.easings[1].moving) then
+      _perso.pos.x = _perso.pos_goals[1].x
+      _perso.pos.y = _perso.pos_goals[1].y
+      table.remove(_perso.pos_goals, 1)
+      table.remove(_perso.easings, 1)
+      if (#perso.pos_goals>0) then
+        _perso.easings[1].startEase()
+        if (_perso.easings[1].duration == 1000) then
+          _perso.falled = true
+          perso_fall:stop()
+          perso_fall:play()
         end
+        _perso.moving = true
       end
     end
   end
   
-  _perso.move = function() 
+  _perso.move = function()
+    if (inScreen(_perso.line, _perso.column)) then
+      if (_Perso.map.map_set[_perso.line][_perso.column] == 2) then
+        move_stone:stop()
+        move_stone:play()
+      elseif (_Perso.map.map_set[_perso.line][_perso.column] == 4) then
+        move_ice:stop()
+        move_ice:play()
+      else 
+        move_grass:stop()
+        move_grass:play()
+
+      end
+    end
     _perso.pos_goals[#_perso.pos_goals+1] = {x = 0, y = 0}
     _perso.pos_goals[#_perso.pos_goals] = _Perso.TabPos2Pos(perso.line, perso.column, _perso.tile_width, _perso.tile_height, _perso.pos_start)
     _perso.pos_goals[#_perso.pos_goals].x = _perso.pos_goals[#_perso.pos_goals].x+_perso.offset.x
     _perso.pos_goals[#_perso.pos_goals].y = _perso.pos_goals[#_perso.pos_goals].y+_perso.offset.y
-    _perso.moving = true
     
-    _perso.ease.start.x = _perso.pos.x
-    _perso.ease.start.y = _perso.pos.y
-    _perso.ease.start_time = socket.gettime()*1000
-    _perso.ease.time = 0
-    _perso.ease.offset.x = _perso.pos_goals[#_perso.pos_goals].x-_perso.pos.x
-    _perso.ease.offset.y = _perso.pos_goals[#_perso.pos_goals].y-_perso.pos.y
-      
+    _perso.easings[#_perso.easings+1] = Ease.newEase(_perso.pos, _perso.pos_goals[#_perso.pos_goals], persoMovesEase, 75)
+    _perso.easings[#_perso.easings].startEase()
+    _perso.moving = true
   end
   
   _perso.up = function(pMap, pObjects, pLvl) 
@@ -110,7 +107,6 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
       _perso.move()
        local continuer = false
       if push_case then
-        print("push case!!")
         local pos_case = {line = _perso.line+1, column = _perso.column}
         if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
           continuer = true
@@ -135,6 +131,17 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
         _perso.column = tmp_perso_pos.column
       end
     end
+    
+    
+    for i = 1, #pMap.map_objects do
+      for j = 1, #pMap.map_objects[i] do
+        io.write(pMap.map_objects[i][j].."|")
+      end
+      print("")
+    end
+    print("")
+    print("--------------")
+    print("")
   end
   
   _perso.down = function(pMap, pObjects, pLvl) 
@@ -142,7 +149,6 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
     push_case = false
     if (pMap.map_objects[_perso.line-1][_perso.column] == 6 or pMap.map_objects[_perso.line-1][_perso.column] == 7) then
       push_case = true
-      print("push case down!! : true")
       if _perso.line-2<1 then
         can = false
       elseif (pMap.map_objects[_perso.line-2][_perso.column] == 6 or pMap.map_objects[_perso.line-2][_perso.column] == 7) then
@@ -245,6 +251,7 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
       end
     end
     if (can) then
+      
       _perso.column = _perso.column+1
       _perso.scale_sign = -1
       _perso.image = _perso.images.up
@@ -284,7 +291,6 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
       if (pObjects[i].line == _perso.line and pObjects[i].column == _perso.column and (pObjects[i].id == 6 or pObjects[i].id == 7)) then
         if (pObjects[i].under ~= nil) then
           _perso.replace_under(pObjects, i, pLvl, pMap)
-          print("replace !!")
         end
         if (pMap.map_objects[pos_case.line][pos_case.column] ~= 0) then
           for j = 1, #pObjects do
@@ -292,7 +298,6 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
             if (pObjects[j].line == pos_case.line and pObjects[j].column == pos_case.column) then
               if (not (pObjects[i].id == 6 and pObjects[j].id == 9) and (pObjects[j].id >= 8 and pObjects[j].id <= 11)) then
                 pLvl.nb_buttons_succed = pLvl.nb_buttons_succed+1
-                print("box on button")
               end
               pObjects[i].under = pObjects[j]
               pObjects[i].under.isunder = true
@@ -321,18 +326,20 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
         end
         
         if (pMap.map_set[pos_case.line][pos_case.column] == 3 and pObjects[i].id == 6)then
-          if (pMap.map_objects == pObjects[i].id) then
+          if (pMap.map_objects[_perso.line][_perso.column] == pObjects[i].id) then
             pMap.map_objects[_perso.line][_perso.column] = 0
           end
           pObjects[i].id = 12
           pObjects[i].image = pMap.tile_set[12].image
           pMap.map_set[pos_case.line][pos_case.column] = -1
+          plouf:play()
         elseif (pMap.map_set[pos_case.line][pos_case.column] == 3 and pObjects[i].id == 7)then
-          if (pMap.map_objects == pObjects[i].id) then
+          if (pMap.map_objects[_perso.line][_perso.column] == pObjects[i].id) then
             pMap.map_objects[_perso.line][_perso.column] = 0
           end
           table.remove(pObjects, i)
           size = size-1
+          plouf:play()
           break
         end
         if (pMap.map_set[pos_case.line][pos_case.column] == 0) then
@@ -341,6 +348,8 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
         else
           pObjects[i].setMoving(tmp_posgoal)
         end
+        move_box:stop()
+        move_box:play()
         
         pMap.map_objects[pos_case.line][pos_case.column] = pObjects[i].id
         if (pMap.map_objects[_perso.line][_perso.column] == pObjects[i].id)then pMap.map_objects[_perso.line][_perso.column] = 0 end
@@ -350,11 +359,11 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
   end
   
   _perso.fall = function(type_fall)
-    _perso.falled = true
+    print("fall !")
     _perso.moving = false
     _perso.move()
     local coeff = 110
-  
+    
     if (type_fall == "hole") then
       coeff = 110
     end
@@ -365,13 +374,13 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
     end
    
     _perso.z = _perso.map_start.y-(_perso.pos_goals[#_perso.pos_goals].y*0.1*_Tile.scale.y)-coeff 
-     print("perso.z : ".._perso.z.." l, c ".._perso.line..", ".._perso.column..", start y : ".._perso.map_start.y)
-     
-    _perso.pos_goals[#_perso.pos_goals].y = _perso.pos_goals[#_perso.pos_goals].y+1000
-    _perso.ease.duration = 2000
-    _perso.ease.fct = persoFallEase
-    _perso.ease.offset.x = _perso.pos_goals[#_perso.pos_goals].x-_perso.pos.x
-    _perso.ease.offset.y = _perso.pos_goals[#_perso.pos_goals].y-_perso.pos.y
+      
+    _perso.pos_goals[#_perso.pos_goals+1] = {x = _perso.pos_goals[#_perso.pos_goals].x, y = _perso.pos_goals[#_perso.pos_goals].y+1000}
+    
+    _perso.easings[#_perso.easings+1] = Ease.newEase(_perso.pos_goals[#_perso.pos_goals-1], _perso.pos_goals[#_perso.pos_goals], persoFallEase, 1000)
+    _perso.moving = true
+    
+    
   end
   
   _perso.replace_under = function(pObjects, i, pLvl, pMap)
@@ -379,7 +388,6 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
       if (pObjects[i].under.id >= 8 and pObjects[i].under.id <= 11) then
         if (not (pObjects[i].id == 6 and pObjects[i].under.id == 9)) then
           pLvl.nb_buttons_succed = pLvl.nb_buttons_succed-1
-          print("box quit button")
         end
       end
       pObjects[i].under.isunder = false
