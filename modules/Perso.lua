@@ -287,6 +287,13 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
   
   _perso.push_case = function (pos_case, pMap, pObjects, pLvl) 
     local size = #pObjects
+    if (_Perso.map.map_objects[pos_case.line][pos_case.column] == 6 or _Perso.map.map_objects[pos_case.line][pos_case.column] == 7) then
+      return false
+    end
+    local duration = 100
+    if (_Perso.map.map_set[pos_case.line][pos_case.column] == 4) then
+      duration = 400
+    end
     for i = 1, size do
       if (pObjects[i].line == _perso.line and pObjects[i].column == _perso.column and (pObjects[i].id == 6 or pObjects[i].id == 7)) then
         if (pObjects[i].under ~= nil) then
@@ -343,10 +350,10 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
           break
         end
         if (pMap.map_set[pos_case.line][pos_case.column] == 0) then
-          pObjects[i].setMoving(tmp_posgoal)
+          pObjects[i].setMoving(tmp_posgoal, duration)
           pObjects[i].fall()
         else
-          pObjects[i].setMoving(tmp_posgoal)
+          pObjects[i].setMoving(tmp_posgoal, duration)
         end
         move_box:stop()
         move_box:play()
