@@ -387,7 +387,6 @@ function love.touchpressed(id, x, y)
   touch_pos.y = y
   touch_presspos.x = x
   touch_presspos.y = y
-  
   touch_screen = true
   
   touch_starttime = socket.gettime()*1000

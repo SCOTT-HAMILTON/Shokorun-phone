@@ -14,17 +14,14 @@ function _Lunar:load( )
     love.keyboard.setKeyRepeat(false)
 end
 
-function _Lunar:update(dt)
+function _Lunar:update(dt, angle)
     if (lunar_mode) then
         lunar_ship.fire_on = false
-        if (love.keyboard.isDown("space")) then
+        if (love.mouse.isDown(1) or touch_screen) then
           lunar_ship.fire_on = true
         end
-        if (love.keyboard.isDown("left")) then
-          lunar_ship.r = lunar_ship.r-5
-        elseif (love.keyboard.isDown("right")) then
-          lunar_ship.r = lunar_ship.r+5
-        end
+        
+        lunar_ship.r = angle+180
         
         if (lunar_ship.pos.x<0)then 
           lunar_ship.pos.x = width 
@@ -58,7 +55,6 @@ function _Lunar:update(dt)
         lunar_ship.pos.y = lunar_ship.pos.y+lunar_ship.vec.y*dt
         lunar_ship.vec.x = lunar_ship.vec.x+math.cos(math.rad(lunar_ship.r))*250 *dt
         if (lunar_ship.fire_on)then 
-          print("oui")
           lunar_ship.vec.y = lunar_ship.vec.y-math.sin(math.rad(lunar_ship.r+180))*500*dt
         end
         lunar_ship.vec.y = lunar_ship.vec.y+200*dt

@@ -140,7 +140,7 @@ function _levelSelect:controller(pos, key)
     return false
   end
   
-  if (touch_press or love.mouse.isDown(1)) then
+  if (touch_screen or love.mouse.isDown(1)) then
     for i = 1, #rectsCards do
       if (p2rectCollide(rectsCards[i], pos)) then
         local val = i
