@@ -1,6 +1,6 @@
 local _Ease = {}
 
-_Ease.newEase = function(pStartPos, pEndPos, pFctEase, pDuration)
+_Ease.newEase = function(pStartPos, pEndPos, pFctEase, pDuration, pFinalPos)
   local _ease =  {}
   _ease.start_pos = {x = 0, y = 0}
   _ease.start_pos.x = pStartPos.x
@@ -13,7 +13,8 @@ _Ease.newEase = function(pStartPos, pEndPos, pFctEase, pDuration)
   _ease.duration = pDuration
   _ease.fct = pFctEase
   _ease.moving = false
-    
+  _ease.final_pos = {line = pFinalPos.line, column = pFinalPos.column}
+  
   _ease.update = function(pPos)
     _ease.time = socket.gettime()*1000
     pPos.x = _ease.fct(_ease.time-_ease.start_time, _ease.start_pos.x, _ease.offset.x, _ease.duration)

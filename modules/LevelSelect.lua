@@ -157,6 +157,8 @@ function chooseLevel()
 end
 
 function p2rectCollide(rect, pos)
+  print("rect : "..type(rect))
+  print("pos : "..type(pos))
   if (
     pos.x>rect.x+cardImg:getWidth() or
     pos.x < rect.x or

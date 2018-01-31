@@ -88,6 +88,18 @@ end
 ------------------------------------------------------
 
 function love.update(dt)
+  if (Level.current_level.nb_buttons_succed == Level.current_level.nb_buttons and 
+      (perso.line == Level.current_level.gate.line and perso.column == Level.current_level.gate.column)
+    ) then
+    
+    lunar_mode = true
+  end
+  --print("perso pos : "..perso.pos.x..", "..perso.pos.y)
+  if (Level.current_level.nb_buttons_succed == Level.current_level.nb_buttons) then
+    Level.current_level.gate.image = Level.current_level.gate.images.open
+  else
+    Level.current_level.gate.image = Level.current_level.gate.images.close
+  end
   touch_timer = socket.gettime()*1000
   if (currentScene == "LEVELSELECT" and touch_screen) then
     if (touch_timer-touch_starttime>500) then
@@ -107,11 +119,11 @@ function love.update(dt)
         if (dir >= -135 and dir < -45) then
           key_is_pressed("up")
         elseif (dir >= -45 and dir < 45) then
-          key_is_pressed("right")
+          key_is_pressed("left")
         elseif (dir >= 45 and dir < 135) then
           key_is_pressed("down")
         else
-          key_is_pressed("left")
+          key_is_pressed("right")
         end
         touch_screen = false
       end
@@ -156,6 +168,14 @@ function love.update(dt)
     for i = 1, #objects do
       if (i < 1 or i > #objects) then break end
       objects[i].update(map_start)
+      if ((objects[i].id == 8 or objects[i].id == 10) and not Tile.isBox(map.map_objects[objects[i].line][objects[i].column])) then
+        if (objects[i].line ~= perso.line or objects[i].column ~= perso.column) then
+          objects[i].id = objects[i].id+1
+          objects[i].image = tile_set[objects[i].id].image
+          map.map_objects[objects[i].line][objects[i].column] = objects[i].id
+          Level.current_level.nb_buttons_succed = Level.current_level.nb_buttons_succed-1
+        end
+      end
       if (not objects[i].moving and objects[i].falled) then
         objects[i].exist = false
         table.remove(objects, i)
@@ -165,8 +185,6 @@ function love.update(dt)
     
     for i = 1, #tiles_ground do
       tiles_ground[i].update(map_start)
-      if (tiles_ground[i].line == 3 and tiles_ground[i].column == 5) then
-      end
       if (not tiles_ground[i].inhole.exist and tiles_ground[i].object_inhole) then
         tiles_ground[i].object_inhole = false
         tiles_ground[i].inhole = {exist = false}
@@ -188,6 +206,21 @@ function love.update(dt)
     end
     if (not perso.moving and perso.falled) then
       loadLevel()
+    end
+    
+    if map.map_objects[perso.line][perso.column] == 9 or map.map_objects[perso.line][perso.column] == 11 then
+      for i = 1, #objects do
+        if objects[i].line == perso.line and objects[i].column == perso.column then
+          if (objects[i].id == 9 or objects[i].id == 11) then
+            objects[i].id = objects[i].id-1
+            Level.current_level.nb_buttons_succed = Level.current_level.nb_buttons_succed+1
+            map.map_objects[perso.line][perso.column] = objects[i].id
+            objects[i].image = tile_set[objects[i].id].image
+          end
+          break
+           
+        end
+      end
     end
     
     camera.update()
@@ -239,9 +272,11 @@ function love.draw()
           end
         end
         
-        love.graphics.rectangle("fill", 550, 683-15, 50, 50)
-
+        love.graphics.print("level "..Level.index_level,15, 5) 
         love.graphics.pop()
+        
+        if (not pause.enable) then love.graphics.print("Press enter to pause ",240,550) end 
+        love.graphics.rectangle("fill", 550, 683-15, 50, 50)
         
         if (lunar_mode) then
           love.graphics.draw(lunar_ship.image, lunar_ship.pos.x, lunar_ship.pos.y, math.rad(lunar_ship.r), Tile.scale.x, Tile.scale.y, lunar_ship.image:getWidth(), lunar_ship.image:getHeight()/2)
@@ -270,16 +305,14 @@ end
 ------------------------------------------------------
 
 function key_is_pressed(key)
-  if (not inScreen(perso.line, perso.column) or perso.falled) then
-    return false
-	end
-  
-  if currentScene  == "TITLESCREEN" then	
+  if (perso.falled)then return false end
+	if currentScene  == "TITLESCREEN" then	
 		tScreen:controller(key)
 	elseif currentScene == "MAINMENU" then
     mainMenu:controller(key)
   elseif currentScene == "LEVELSELECT" then
-    levelSelect:controller(nil, key)
+    levelSelect:controller(touch_pos, key)
+    Level.index_level = levelSelect:getVal()
 	elseif currentScene == "MAINGAME" then  -- IN GAME CONTROLL
     pause:ingame(key)
     if pause.enable == false then
@@ -330,33 +363,20 @@ function key_is_pressed(key)
           end
         end
       end
-      if map.map_objects[perso.line][perso.column] == 9 or map.map_objects[perso.line][perso.column] == 11 then
-        for i = 1, #objects do
-          if objects[i].line == perso.line and objects[i].column == perso.column then
-            if (objects[i].id == 9 or objects[i].id == 11) then
-              objects[i].id = objects[i].id-1
+      
+      if prec_pos.line ~= perso.line or prec_pos.column ~= perso.column then
+        if Tile.isButton(map.map_objects[perso.line][perso.column]) then
+          for i = 1, #objects do
+            if objects[i].line == perso.line and objects[i].column == perso.column and Tile.isButton(objects[i].id) then
+              objects[i].id = objects[i].id+1
               Level.current_level.nb_buttons_succed = Level.current_level.nb_buttons_succed+1
-              map.map_objects[perso.line][perso.column] = objects[i].id
+              map.map_objects[prec_pos.line][prec_pos.column] = objects[i].id
               objects[i].image = tile_set[objects[i].id].image
+              break
             end
-            break
-             
           end
         end
       end
-      
-      if (Level.current_level.nb_buttons_succed == Level.current_level.nb_buttons) then
-        Level.current_level.gate.image = Level.current_level.gate.images.open
-      else
-        Level.current_level.gate.image = Level.current_level.gate.images.close
-      end
-    end
-    
-    if (Level.current_level.nb_buttons_succed == Level.current_level.nb_buttons and 
-        (perso.line == Level.current_level.gate.line and perso.column == Level.current_level.gate.column)
-      ) then
-      
-      lunar_mode = true
     end
     
     for i = 1, #objects do
@@ -459,12 +479,17 @@ end
 
 function canPass(nextPos, id)
   if (lunar_mode)then return false end
+  
   if (
     nextPos.line<=map.nb_tile_height and 
     nextPos.line>=1 and
     nextPos.column<=map.nb_tile_width and
     nextPos.column>=1
     ) then
+    local vec = {line = nextPos.line-perso.line, column = nextPos.column-perso.column}
+    if (Tile.isBox(map.map_objects[nextPos.line][nextPos.column]) and not inScreen(nextPos.line+vec.line, nextPos.column+vec.column)) then
+      return false
+    end
     
     if (Tile.isPerso(id) and map.map_set[nextPos.line][nextPos.column] == 3) then
       return false
@@ -491,7 +516,6 @@ function canPass(nextPos, id)
   end
   return false
 end
-
 
 ------------------------------------------------------
 --=                     LOAD LEVEL                 =--
@@ -639,48 +663,6 @@ function move_perso(wanted_nextpos, fctMove)
       end
     end
     
-    while (CanPass and glass_under) do
-      local type_fall = ""
-      if (shouldFall(wanted_nextpos.line, wanted_nextpos.column, type_fall)) then
-        fallPerso(wanted_nextpos)
-        return false
-      end
-      if (map.map_set[wanted_nextpos.line][wanted_nextpos.column] == 4) then
-        diff_c = perso.column
-        diff_l = perso.line
-        fctMove(map, objects, Level.current_level)
-        diff_c = perso.column-diff_c
-        diff_l = perso.line-diff_l
-        wanted_nextpos.line = wanted_nextpos.line+diff_l
-        wanted_nextpos.column = wanted_nextpos.column+diff_c
-        if (Level.current_level.nb_buttons_succed == Level.current_level.nb_buttons and 
-            (perso.line == Level.current_level.gate.line and perso.column == Level.current_level.gate.column)
-          ) then
-          
-          lunar_mode = true
-          return false
-        end
-      end
-      if (diff_c == 0 and diff_l == 0)then 
-        break 
-      end
-            
-      CanPass = canPass({line = wanted_nextpos.line, column = wanted_nextpos.column}, perso.id)
-      if (not CanPass )then
-      end
-      if (CanPass) then
-        if (map.map_objects[wanted_nextpos.line][wanted_nextpos.column] == 6 or map.map_objects[perso.line][wanted_nextpos.column] == 7) then
-          CanPass = canPass({line = (wanted_nextpos.line-perso.line)*2+perso.line, column = (wanted_nextpos.column-perso.column)*2+perso.column}, 6)
-        end
-      end
-      if CanPass then
-        if (map.map_set[wanted_nextpos.line][wanted_nextpos.column] ~= 4) then
-          fctMove(map, objects, Level.current_level)
-          CanPass = false
-          break
-        end
-      end      
-    end
     local type_fall = ""
     if (glass_under and shouldFall(wanted_nextpos.line, wanted_nextpos.column, type_fall)) then
       fallPerso(wanted_nextpos)

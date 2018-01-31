@@ -45,14 +45,21 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
       perso.moving = true
     end
     _perso.easings[1].update(_perso.pos)
+    if (_perso.falled) then
+      --print("_perso pos : ".._perso.pos.x..", ".._perso.pos.y)
+    end
     if (not _perso.easings[1].moving) then
       _perso.pos.x = _perso.pos_goals[1].x
       _perso.pos.y = _perso.pos_goals[1].y
+      _perso.line = _perso.easings[1].final_pos.line
+      _perso.column = _perso.easings[1].final_pos.column
       table.remove(_perso.pos_goals, 1)
       table.remove(_perso.easings, 1)
+      print("end !")
       if (#perso.pos_goals>0) then
         _perso.easings[1].startEase()
         if (_perso.easings[1].duration == 1000) then
+          print("fall start !")
           _perso.falled = true
           perso_fall:stop()
           perso_fall:play()
@@ -81,7 +88,7 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
     _perso.pos_goals[#_perso.pos_goals].x = _perso.pos_goals[#_perso.pos_goals].x+_perso.offset.x
     _perso.pos_goals[#_perso.pos_goals].y = _perso.pos_goals[#_perso.pos_goals].y+_perso.offset.y
     
-    _perso.easings[#_perso.easings+1] = Ease.newEase(_perso.pos, _perso.pos_goals[#_perso.pos_goals], persoMovesEase, 75)
+    _perso.easings[#_perso.easings+1] = Ease.newEase(_perso.pos, _perso.pos_goals[#_perso.pos_goals], persoMovesEase, 75, _perso)
     _perso.easings[#_perso.easings].startEase()
     _perso.moving = true
   end
@@ -100,12 +107,12 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
       end
     end
     if (can) then
-      _perso.line = _perso.line+1 
       _perso.image = _perso.images.up
       _perso.scale_sign = 1
-       
+      local tmp_perso_pos = {line = _perso.line, column = _perso.column}
+      _perso.line = _perso.line+1 
       _perso.move()
-       local continuer = false
+      local continuer = false
       if push_case then
         local pos_case = {line = _perso.line+1, column = _perso.column}
         if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
@@ -113,60 +120,83 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
         else
           _perso.push_case(pos_case, pMap, pObjects, pLvl)
         end
-        local tmp_perso_pos = {line = _perso.line, column = _perso.column}
-        while (continuer) do
-          if (pMap.map_set[pos_case.line][pos_case.column] ~= 4) then continuer = false end
+        
+        while (continuer and inScreen(pos_case.line, pos_case.column)) do
+          _perso.line = pos_case.line-1
           _perso.push_case(pos_case, pMap, pObjects, pLvl)
           pos_case = {line = pos_case.line+1, column = pos_case.column}
-          _perso.line = _perso.line+1
-          if (pos_case.line<=map.nb_tile_height and pos_case.line>=1 and pos_case.column<=map.nb_tile_width and pos_case.column>=1) then
-            if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
-              continuer = true
-            end
+          if (not inScreen(pos_case.line, pos_case.column)) then
+            break
+          end
+          if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
+            continuer = true
           else
-            continuer = false
+            _perso.push_case(pos_case, pMap, pObjects, pLvl)
           end
         end
-        _perso.line = tmp_perso_pos.line
-        _perso.column = tmp_perso_pos.column
+        
       end
-    end
-    
-    
-    for i = 1, #pMap.map_objects do
-      for j = 1, #pMap.map_objects[i] do
-        io.write(pMap.map_objects[i][j].."|")
+      
+      _perso.line = tmp_perso_pos.line
+      _perso.column = tmp_perso_pos.column
+      local perso_next_pos = {line = tmp_perso_pos.line+1, column = tmp_perso_pos.column}
+      continuer = false
+      if (inScreen(perso_next_pos.line, perso_next_pos.column)) then
+        if (_Perso.map.map_set[perso_next_pos.line][perso_next_pos.column] == 4) then
+          continuer = true
+        end
       end
-      print("")
+      
+      while (continuer and inScreen(perso_next_pos.line, perso_next_pos.column) and canPass(perso_next_pos, _perso.id)) do
+        _perso.line = perso_next_pos.line
+        _perso.column = perso_next_pos.column
+        _perso.move()
+        perso_next_pos.line = perso_next_pos.line+1
+        continuer = false
+        if (inScreen(perso_next_pos.line, perso_next_pos.column)) then
+          if (_Perso.map.map_set[perso_next_pos.line][perso_next_pos.column] == 4) then
+            continuer = true
+          end
+        end
+        if (not continuer and inScreen(perso_next_pos.line, perso_next_pos.column) and canPass(perso_next_pos, _perso.id)) then
+          _perso.line = perso_next_pos.line
+          _perso.column = perso_next_pos.column
+          _perso.move()
+          local pose_case = {line = _perso.line+1, column = _perso.column}
+          if (pMap.map_objects[_perso.line][_perso.column] == 6 or pMap.map_objects[_perso.line][_perso.column] == 7) then
+            _perso.push_case(pos_case, pMap, pObjects, pLvl)
+          end
+        end
+      end
+      
+      _perso.line = tmp_perso_pos.line
+      _perso.column = tmp_perso_pos.column
+        
+      _perso.line = tmp_perso_pos.line
+      _perso.column = tmp_perso_pos.column
     end
-    print("")
-    print("--------------")
-    print("")
   end
   
   _perso.down = function(pMap, pObjects, pLvl) 
     can = true
     push_case = false
+    
     if (pMap.map_objects[_perso.line-1][_perso.column] == 6 or pMap.map_objects[_perso.line-1][_perso.column] == 7) then
       push_case = true
-      if _perso.line-2<1 then
+      
+      if _perso.line-2>_Perso.map.nb_tile_height then
         can = false
       elseif (pMap.map_objects[_perso.line-2][_perso.column] == 6 or pMap.map_objects[_perso.line-2][_perso.column] == 7) then
         can = false
       end
     end
-    
-    if (not can) then
-      
-    end
     if (can) then
-      
+      _perso.image = _perso.images.up
+      _perso.scale_sign = 1
+      local tmp_perso_pos = {line = _perso.line, column = _perso.column}
       _perso.line = _perso.line-1 
-      _perso.scale_sign = -1
-      _perso.image = _perso.images.down
-      
       _perso.move()
-      
+      local continuer = false
       if push_case then
         local pos_case = {line = _perso.line-1, column = _perso.column}
         if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
@@ -174,44 +204,83 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
         else
           _perso.push_case(pos_case, pMap, pObjects, pLvl)
         end
-        local tmp_perso_pos = {line = _perso.line, column = _perso.column}
-        while (continuer) do
-          if (pMap.map_set[pos_case.line][pos_case.column] ~= 4) then continuer = false end
+        
+        while (continuer and inScreen(pos_case.line, pos_case.column)) do
+          _perso.line = pos_case.line-1
           _perso.push_case(pos_case, pMap, pObjects, pLvl)
           pos_case = {line = pos_case.line-1, column = pos_case.column}
-          _perso.line = _perso.line-1
-          if (pos_case.line<=map.nb_tile_height and pos_case.line>=1 and pos_case.column<=map.nb_tile_width and pos_case.column>=1) then
-            if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
-              continuer = true
-            end
+          if (not inScreen(pos_case.line, pos_case.column)) then
+            break
+          end
+          if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
+            continuer = true
           else
-            continuer = false
+            _perso.push_case(pos_case, pMap, pObjects, pLvl)
           end
         end
-        _perso.line = tmp_perso_pos.line
-        _perso.column = tmp_perso_pos.column
+        
       end
+      
+      _perso.line = tmp_perso_pos.line
+      _perso.column = tmp_perso_pos.column
+      local perso_next_pos = {line = tmp_perso_pos.line-1, column = tmp_perso_pos.column}
+      continuer = false
+      if (inScreen(perso_next_pos.line, perso_next_pos.column)) then
+        if (_Perso.map.map_set[perso_next_pos.line][perso_next_pos.column] == 4) then
+          continuer = true
+        end
+      end
+      
+      while (continuer and inScreen(perso_next_pos.line, perso_next_pos.column) and canPass(perso_next_pos, _perso.id)) do
+        _perso.line = perso_next_pos.line
+        _perso.column = perso_next_pos.column
+        _perso.move()
+        perso_next_pos.line = perso_next_pos.line-1
+        continuer = false
+        if (inScreen(perso_next_pos.line, perso_next_pos.column)) then
+          if (_Perso.map.map_set[perso_next_pos.line][perso_next_pos.column] == 4) then
+            continuer = true
+          end
+        end
+        if (not continuer and inScreen(perso_next_pos.line, perso_next_pos.column) and canPass(perso_next_pos, _perso.id)) then
+          _perso.line = perso_next_pos.line
+          _perso.column = perso_next_pos.column
+          _perso.move()
+          local pos_case = {line = _perso.line-1, column = _perso.column}
+          if (pMap.map_objects[_perso.line][_perso.column] == 6 or pMap.map_objects[_perso.line][_perso.column] == 7) then
+            _perso.push_case(pos_case, pMap, pObjects, pLvl)
+          end
+        end
+      end
+      
+      _perso.line = tmp_perso_pos.line
+      _perso.column = tmp_perso_pos.column
+        
+      _perso.line = tmp_perso_pos.line
+      _perso.column = tmp_perso_pos.column
     end
   end
   
   _perso.right = function(pMap, pObjects, pLvl) 
     can = true
     push_case = false
+    
     if (pMap.map_objects[_perso.line][_perso.column-1] == 6 or pMap.map_objects[_perso.line][_perso.column-1] == 7) then
       push_case = true
-      if _perso.column-2<1 then
+      
+      if _perso.column-2>_Perso.map.nb_tile_width then
         can = false
       elseif (pMap.map_objects[_perso.line][_perso.column-2] == 6 or pMap.map_objects[_perso.line][_perso.column-2] == 7) then
         can = false
       end
     end
     if (can) then
-      _perso.column = _perso.column-1
+      _perso.image = _perso.images.up
       _perso.scale_sign = 1
-      _perso.image = _perso.images.down
-      
+      local tmp_perso_pos = {line = _perso.line, column = _perso.column}
+      _perso.column = _perso.column-1 
       _perso.move()
-      
+      local continuer = false
       if push_case then
         local pos_case = {line = _perso.line, column = _perso.column-1}
         if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
@@ -219,31 +288,70 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
         else
           _perso.push_case(pos_case, pMap, pObjects, pLvl)
         end
-        local tmp_perso_pos = {line = _perso.line, column = _perso.column}
-        while (continuer) do
-          if (pMap.map_set[pos_case.line][pos_case.column] ~= 4) then continuer = false end
+        
+        while (continuer and inScreen(pos_case.line, pos_case.column)) do
+          _perso.column = pos_case.column-1
           _perso.push_case(pos_case, pMap, pObjects, pLvl)
           pos_case = {line = pos_case.line, column = pos_case.column-1}
-          _perso.column = _perso.column-1
-          if (pos_case.line<=map.nb_tile_height and pos_case.line>=1 and pos_case.column<=map.nb_tile_width and pos_case.column>=1) then
-            if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
-              continuer = true
-            end
+          if (not inScreen(pos_case.line, pos_case.column)) then
+            break
+          end
+          if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
+            continuer = true
           else
-            continuer = false
+            _perso.push_case(pos_case, pMap, pObjects, pLvl)
           end
         end
-        _perso.line = tmp_perso_pos.line
-        _perso.column = tmp_perso_pos.column
+        
       end
+      
+      _perso.line = tmp_perso_pos.line
+      _perso.column = tmp_perso_pos.column
+      local perso_next_pos = {line = tmp_perso_pos.line, column = tmp_perso_pos.column-1}
+      continuer = false
+      if (inScreen(perso_next_pos.line, perso_next_pos.column)) then
+        if (_Perso.map.map_set[perso_next_pos.line][perso_next_pos.column] == 4) then
+          continuer = true
+        end
+      end
+      
+      while (continuer and inScreen(perso_next_pos.line, perso_next_pos.column) and canPass(perso_next_pos, _perso.id)) do
+        _perso.line = perso_next_pos.line
+        _perso.column = perso_next_pos.column
+        _perso.move()
+        perso_next_pos.column = perso_next_pos.column-1
+        continuer = false
+        if (inScreen(perso_next_pos.line, perso_next_pos.column)) then
+          if (_Perso.map.map_set[perso_next_pos.line][perso_next_pos.column] == 4) then
+            continuer = true
+          end
+        end
+        if (not continuer and inScreen(perso_next_pos.line, perso_next_pos.column) and canPass(perso_next_pos, _perso.id)) then
+          _perso.line = perso_next_pos.line
+          _perso.column = perso_next_pos.column
+          _perso.move()
+          local pose_case = {line = _perso.line, column = _perso.column-1}
+          if (pMap.map_objects[_perso.line][_perso.column] == 6 or pMap.map_objects[_perso.line][_perso.column] == 7) then
+            _perso.push_case(pos_case, pMap, pObjects, pLvl)
+          end
+        end
+      end
+      
+      _perso.line = tmp_perso_pos.line
+      _perso.column = tmp_perso_pos.column
+        
+      _perso.line = tmp_perso_pos.line
+      _perso.column = tmp_perso_pos.column
     end
   end
   
   _perso.left = function(pMap, pObjects, pLvl)
     can = true
     push_case = false
+    
     if (pMap.map_objects[_perso.line][_perso.column+1] == 6 or pMap.map_objects[_perso.line][_perso.column+1] == 7) then
       push_case = true
+      
       if _perso.column+2>_Perso.map.nb_tile_width then
         can = false
       elseif (pMap.map_objects[_perso.line][_perso.column+2] == 6 or pMap.map_objects[_perso.line][_perso.column+2] == 7) then
@@ -251,13 +359,12 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
       end
     end
     if (can) then
-      
-      _perso.column = _perso.column+1
-      _perso.scale_sign = -1
       _perso.image = _perso.images.up
-      
+      _perso.scale_sign = 1
+      local tmp_perso_pos = {line = _perso.line, column = _perso.column}
+      _perso.column = _perso.column+1 
       _perso.move()
-      
+      local continuer = false
       if push_case then
         local pos_case = {line = _perso.line, column = _perso.column+1}
         if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
@@ -265,28 +372,66 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
         else
           _perso.push_case(pos_case, pMap, pObjects, pLvl)
         end
-        local tmp_perso_pos = {line = _perso.line, column = _perso.column}
-        while (continuer) do
-          if (pMap.map_set[pos_case.line][pos_case.column] ~= 4) then continuer = false end
+        
+        while (continuer and inScreen(pos_case.line, pos_case.column)) do
+          _perso.column = pos_case.column+1
           _perso.push_case(pos_case, pMap, pObjects, pLvl)
           pos_case = {line = pos_case.line, column = pos_case.column+1}
-          _perso.column = _perso.column+1
-          if (pos_case.line<=map.nb_tile_height and pos_case.line>=1 and pos_case.column<=map.nb_tile_width and pos_case.column>=1) then
-            if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
-              continuer = true
-            end
+          if (not inScreen(pos_case.line, pos_case.column)) then
+            break
+          end
+          if (pMap.map_set[pos_case.line][pos_case.column] == 4) then
+            continuer = true
           else
-            continuer = false
+            _perso.push_case(pos_case, pMap, pObjects, pLvl)
           end
         end
-        _perso.line = tmp_perso_pos.line
-        _perso.column = tmp_perso_pos.column
+        
       end
+      
+      _perso.line = tmp_perso_pos.line
+      _perso.column = tmp_perso_pos.column
+      local perso_next_pos = {line = tmp_perso_pos.line, column = tmp_perso_pos.column+1}
+      continuer = false
+      if (inScreen(perso_next_pos.line, perso_next_pos.column)) then
+        if (_Perso.map.map_set[perso_next_pos.line][perso_next_pos.column] == 4) then
+          continuer = true
+        end
+      end
+      
+      while (continuer and inScreen(perso_next_pos.line, perso_next_pos.column) and canPass(perso_next_pos, _perso.id)) do
+        _perso.line = perso_next_pos.line
+        _perso.column = perso_next_pos.column
+        _perso.move()
+        perso_next_pos.column = perso_next_pos.column+1
+        continuer = false
+        if (inScreen(perso_next_pos.line, perso_next_pos.column)) then
+          if (_Perso.map.map_set[perso_next_pos.line][perso_next_pos.column] == 4) then
+            continuer = true
+          end
+        end
+        if (not continuer and inScreen(perso_next_pos.line, perso_next_pos.column) and canPass(perso_next_pos, _perso.id)) then
+          _perso.line = perso_next_pos.line
+          _perso.column = perso_next_pos.column
+          _perso.move()
+          local pose_case = {line = _perso.line, column = _perso.column+1}
+          if (pMap.map_objects[_perso.line][_perso.column] == 6 or pMap.map_objects[_perso.line][_perso.column] == 7) then
+            _perso.push_case(pos_case, pMap, pObjects, pLvl)
+          end
+        end
+      end
+      
+      _perso.line = tmp_perso_pos.line
+      _perso.column = tmp_perso_pos.column
+        
+      _perso.line = tmp_perso_pos.line
+      _perso.column = tmp_perso_pos.column
     end
   end
   
   _perso.push_case = function (pos_case, pMap, pObjects, pLvl) 
     local size = #pObjects
+    print("push case #1")
     if (_Perso.map.map_objects[pos_case.line][pos_case.column] == 6 or _Perso.map.map_objects[pos_case.line][pos_case.column] == 7) then
       return false
     end
@@ -383,8 +528,8 @@ _Perso.newPerso = function(map_start, pLine, pColumn, pPathImages, p_Tile, pos_s
     _perso.z = _perso.map_start.y-(_perso.pos_goals[#_perso.pos_goals].y*0.1*_Tile.scale.y)-coeff 
       
     _perso.pos_goals[#_perso.pos_goals+1] = {x = _perso.pos_goals[#_perso.pos_goals].x, y = _perso.pos_goals[#_perso.pos_goals].y+1000}
-    
-    _perso.easings[#_perso.easings+1] = Ease.newEase(_perso.pos_goals[#_perso.pos_goals-1], _perso.pos_goals[#_perso.pos_goals], persoFallEase, 1000)
+    print("before : "..#_perso.easings)
+    _perso.easings[#_perso.easings+1] = Ease.newEase(_perso.pos_goals[#_perso.pos_goals-1], _perso.pos_goals[#_perso.pos_goals], persoFallEase, 1000, _perso.easings[#_perso.easings].final_pos)
     _perso.moving = true
     
     

@@ -1,6 +1,6 @@
 titleScreen = {
 	img = love.graphics.newImage("images/titlescreen/gootorigin.png"),
-	pStart = "Press space to start"
+	pStart = "Press to start"
 	}
 
 timer=0
@@ -11,7 +11,7 @@ function titleScreen:draw()
 	love.graphics.draw(titleScreen.img,0,0,0,4,4)
 	
 	if timer < tRst then
-		love.graphics.print(titleScreen.pStart, 250,500)
+		love.graphics.print(titleScreen.pStart, 300,500)
 	elseif timer > tRst * 2 then
 		timer = 0
 	end
